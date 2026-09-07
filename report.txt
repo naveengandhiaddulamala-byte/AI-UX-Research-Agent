@@ -1,0 +1,66 @@
+===== UX RESEARCH REPORT =====
+
+USER QUESTION:
+How many users are there in total and how many users are affected by each UX problem?
+
+TOTAL USERS:
+10
+
+UX PROBLEMS:
+
+1. Lack of Pricing Transparency and Unexpected Checkout Costs
+   Affected users: 3
+   Users: User 2, User 5, User 8
+
+   Evidence:
+   - User 2: "The price shown on the product page was different from the final price."
+   - User 5: "Delivery charges appeared only at checkout."
+   - User 8: "The final amount was higher than I expected."
+
+   Priority: HIGH
+
+2. Lack of Delivery Time Visibility
+   Affected users: 3
+   Users: User 3, User 6, User 10
+
+   Evidence:
+   - User 3: "I didn't know when my groceries would arrive."
+   - User 6: "I wanted to know the delivery time before placing the order."
+   - User 10: "The estimated delivery time wasn't clearly visible."
+
+   Priority: HIGH
+
+3. Lack of Product Selection Guidance and Comparison Tools
+   Affected users: 3
+   Users: User 1, User 4, User 9
+
+   Evidence:
+   - User 1: "I couldn't understand which grocery product was best for me."
+   - User 4: "There were too many products and no proper guidance to choose one."
+   - User 9: "I couldn't easily compare similar products."
+
+   Priority: HIGH
+
+4. Irrelevant Search Results
+   Affected users: 1
+   Users: User 7
+
+   Evidence:
+   - User 7: "Product search gave me too many irrelevant results."
+
+   Priority: LOW
+
+===== TOP UX PRIORITY =====
+
+Problem:
+Lack of Pricing Transparency and Unexpected Checkout Costs
+
+Affected users:
+3
+
+Why it matters:
+Hidden fees and discrepancies between product page prices and the final price degrade user trust, create friction, and lead directly to cart abandonment.
+
+===== UX RECOMMENDATION =====
+
+Display delivery fees and total estimated costs transparently on the cart page or product pages before checkout. Ensure that prices displayed on the item pages are fully accurate and consistent with the final billing amount.

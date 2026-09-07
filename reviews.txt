@@ -1,0 +1,10 @@
+User 1: I couldn't understand which grocery product was best for me.
+User 2: The price shown on the product page was different from the final price.
+User 3: I didn't know when my groceries would arrive.
+User 4: There were too many products and no proper guidance to choose one.
+User 5: Delivery charges appeared only at checkout.
+User 6: I wanted to know the delivery time before placing the order.
+User 7: Product search gave me too many irrelevant results.
+User 8: The final amount was higher than I expected.
+User 9: I couldn't easily compare similar products.
+User 10: The estimated delivery time wasn't clearly visible.

@@ -1,16 +1,43 @@
 ===== UX RESEARCH REPORT =====
 
 USER QUESTION:
-How many users are there in total and how many users are affected by each UX problem?
+Which UX problem affects the most users?
 
 TOTAL USERS:
 10
 
+
 UX PROBLEMS:
 
-1. Lack of Pricing Transparency and Unexpected Checkout Costs
+1. Product Selection
+
+   Affected users: 4
+   Percentage: 40%
+
+   Users:
+   - User 1
+   - User 4
+   - User 7
+   - User 9
+
+   Evidence:
+   - User 1: "I couldn't understand which grocery product was best for me."
+   - User 4: "There were too many products and no proper guidance to choose one."
+   - User 7: "Product search gave me too many irrelevant results."
+   - User 9: "I couldn't easily compare similar products."
+
+   Priority: HIGH
+
+
+2. Price Transparency
+
    Affected users: 3
-   Users: User 2, User 5, User 8
+   Percentage: 30%
+
+   Users:
+   - User 2
+   - User 5
+   - User 8
 
    Evidence:
    - User 2: "The price shown on the product page was different from the final price."
@@ -19,48 +46,42 @@ UX PROBLEMS:
 
    Priority: HIGH
 
-2. Lack of Delivery Time Visibility
+
+3. Delivery Information
+
    Affected users: 3
-   Users: User 3, User 6, User 10
+   Percentage: 30%
+
+   Users:
+   - User 3
+   - User 6
+   - User 10
 
    Evidence:
    - User 3: "I didn't know when my groceries would arrive."
    - User 6: "I wanted to know the delivery time before placing the order."
    - User 10: "The estimated delivery time wasn't clearly visible."
 
-   Priority: HIGH
+   Priority: MEDIUM
 
-3. Lack of Product Selection Guidance and Comparison Tools
-   Affected users: 3
-   Users: User 1, User 4, User 9
-
-   Evidence:
-   - User 1: "I couldn't understand which grocery product was best for me."
-   - User 4: "There were too many products and no proper guidance to choose one."
-   - User 9: "I couldn't easily compare similar products."
-
-   Priority: HIGH
-
-4. Irrelevant Search Results
-   Affected users: 1
-   Users: User 7
-
-   Evidence:
-   - User 7: "Product search gave me too many irrelevant results."
-
-   Priority: LOW
 
 ===== TOP UX PRIORITY =====
 
 Problem:
-Lack of Pricing Transparency and Unexpected Checkout Costs
+Product Selection
 
 Affected users:
-3
+4
+
+Percentage:
+40%
 
 Why it matters:
-Hidden fees and discrepancies between product page prices and the final price degrade user trust, create friction, and lead directly to cart abandonment.
+Users suffer from choice paralysis due to a high volume of products without helpful navigation or comparison tools. Irrelevant search results and a lack of guiding information make it difficult for users to confidently choose the right products.
+
 
 ===== UX RECOMMENDATION =====
 
-Display delivery fees and total estimated costs transparently on the cart page or product pages before checkout. Ensure that prices displayed on the item pages are fully accurate and consistent with the final billing amount.
+1. Improve Product Selection Guidance: Introduce a clear, side-by-side product comparison tool that allows users to easily evaluate similar products. Optimize search relevance to prevent users from being overwhelmed by irrelevant results, and add filtering options and guides to help them select the best items.
+2. Improve Price Transparency: Display complete pricing information, including any additional delivery charges, early in the user flow (e.g., on product pages or cart screens) rather than only at final checkout.
+3. Improve Delivery Transparency: Show estimated delivery times prominently on both the homepage/product page and before order confirmation to set clear user expectations.

@@ -78,6 +78,34 @@ def save_report(report):
 
     return "Report successfully saved to report.txt"
 
+def save_report(report):
+    ...
+    return "Report successfully saved to report.txt"
+
+
+# ---------- TOOL 6: CALCULATE PRIORITY SCORE ----------
+def calculate_priority_score(frequency_score, severity, business_impact):
+    """Calculate the UX problem priority score."""
+
+    score = frequency_score + severity + business_impact
+
+    if score >= 24:
+        priority = "CRITICAL"
+    elif score >= 18:
+        priority = "HIGH"
+    elif score >= 10:
+        priority = "MEDIUM"
+    else:
+        priority = "LOW"
+
+    return {
+        "score": score,
+        "priority": priority
+    }
+
+
+# ---------- GEMINI ----------
+
 
 # ---------- GEMINI ----------
 api_key = os.environ.get("GEMINI_API_KEY")
@@ -190,6 +218,40 @@ tools = types.Tool(
                 },
                 required=["report"]
             )
+        ),
+                # TOOL 6: CALCULATE PRIORITY SCORE
+        types.FunctionDeclaration(
+            name="calculate_priority_score",
+            description=(
+                "Calculates the priority score and priority level "
+                "of a UX problem using frequency, severity, "
+                "and business impact scores."
+            ),
+            parameters=types.Schema(
+                type="OBJECT",
+                properties={
+                    "frequency_score": types.Schema(
+                        type="NUMBER",
+                        description=(
+                            "Frequency score from 0 to 10, "
+                            "based on the percentage of users affected."
+                        )
+                    ),
+                    "severity": types.Schema(
+                        type="NUMBER",
+                        description="Severity score from 1 to 10."
+                    ),
+                    "business_impact": types.Schema(
+                        type="NUMBER",
+                        description="Business impact score from 1 to 10."
+                    )
+                },
+                required=[
+                    "frequency_score",
+                    "severity",
+                    "business_impact"
+                ]
+            )
         )
     ]
 )
@@ -245,19 +307,38 @@ FOLLOW THIS WORKFLOW:
 
    affected users / total users * 100
 
-9. Rank UX problems by the number of affected users.
+9. For each UX problem, assess:
 
-10. Use only evidence from the actual reviews.
+   - Severity from 1 to 10 based only on evidence
+     from the actual reviews.
 
-11. Do not invent users, numbers, problems, or quotes.
+   - Business impact from 1 to 10 based only on
+     evidence from the actual reviews and the
+     user's journey.
 
-12. A user can belong to more than one UX problem
-    if their review clearly describes multiple problems.
+   - Do not change or manipulate the actual
+     affected-user count or percentage.
 
-13. After completing the analysis, create a clear UX research report.
+   - Frequency represents the actual research data.
+     Never increase, decrease, or manipulate frequency
+     because an issue appears more or less severe.
 
-14. Use the save_report tool to save the final report
-    into report.txt.
+10. For EVERY UX problem identified, send its
+    frequency score, severity score, and business
+    impact score to the calculate_priority_score tool.
+
+    Call the tool separately for each UX problem.
+
+11. Record the priority score and priority level
+    returned by Python for each UX problem.
+
+12. Rank ALL UX problems from highest priority
+    to lowest priority using the priority scores.
+
+13. Provide a specific UX recommendation for
+    each identified problem.
+
+
 
 
 FINAL REPORT FORMAT:
@@ -286,7 +367,15 @@ UX PROBLEMS:
    - User [number]: "[short quote]"
    - User [number]: "[short quote]"
 
-   Priority: [HIGH / MEDIUM / LOW]
+   Priority: [Frequency Score: [0–10]
+Severity: [1–10]
+Business Impact: [1–10]
+Priority Score: [score]/30
+Priority: [CRITICAL / HIGH / MEDIUM / LOW]
+
+Why this priority:
+[Explain why this issue received this priority based only
+on the review evidence.]]
 
 
 2. [Problem name]
@@ -302,7 +391,15 @@ UX PROBLEMS:
    - User [number]: "[short quote]"
    - User [number]: "[short quote]"
 
-   Priority: [HIGH / MEDIUM / LOW]
+   Priority: [Frequency Score: [0–10]
+Severity: [1–10]
+Business Impact: [1–10]
+Priority Score: [score]/30
+Priority: [CRITICAL / HIGH / MEDIUM / LOW]
+
+Why this priority:
+[Explain why this issue received this priority based only
+on the review evidence.]]
 
 
 ===== TOP UX PRIORITY =====
@@ -473,6 +570,39 @@ while True:
                     }
                 )
             )
+                    # ---------- CALCULATE PRIORITY SCORE ----------
+        elif function_call.name == "calculate_priority_score":
+
+            frequency_score = function_call.args["frequency_score"]
+            severity = function_call.args["severity"]
+            business_impact = function_call.args["business_impact"]
+
+            print(
+                f"🎯 Calculating priority: "
+                f"Frequency={frequency_score}, "
+                f"Severity={severity}, "
+                f"Business Impact={business_impact}"
+            )
+
+            result = calculate_priority_score(
+                frequency_score,
+                severity,
+                business_impact
+            )
+
+            print(
+                f"🎯 Priority Score: {result['score']}/30 "
+                f"→ {result['priority']}"
+            )
+
+            tool_parts.append(
+                types.Part.from_function_response(
+                    name="calculate_priority_score",
+                    response={
+                        "result": result
+                    }
+                )
+            )
 
 
     # Add tool results back to Gemini
@@ -487,3 +617,4 @@ while True:
 # ---------- FINAL RESULT ----------
 print("\n===== UX RESEARCH AGENT =====\n")
 print(response.text)
+print(calculate_priority_score(3, 7, 8))

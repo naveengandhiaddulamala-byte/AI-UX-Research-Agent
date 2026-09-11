@@ -1,7 +1,7 @@
 ===== UX RESEARCH REPORT =====
 
 USER QUESTION:
-Which UX problem affects the most users?
+Determine the total number of users/reviews.
 
 TOTAL USERS:
 10
@@ -9,7 +9,7 @@ TOTAL USERS:
 
 UX PROBLEMS:
 
-1. Product Selection
+1. Product Selection Guidance
 
    Affected users: 4
    Percentage: 40%
@@ -44,10 +44,10 @@ UX PROBLEMS:
    - User 5: "Delivery charges appeared only at checkout."
    - User 8: "The final amount was higher than I expected."
 
-   Priority: HIGH
+   Priority: MEDIUM
 
 
-3. Delivery Information
+3. Delivery Time Visibility
 
    Affected users: 3
    Percentage: 30%
@@ -68,7 +68,7 @@ UX PROBLEMS:
 ===== TOP UX PRIORITY =====
 
 Problem:
-Product Selection
+Product Selection Guidance
 
 Affected users:
 4
@@ -77,11 +77,13 @@ Percentage:
 40%
 
 Why it matters:
-Users suffer from choice paralysis due to a high volume of products without helpful navigation or comparison tools. Irrelevant search results and a lack of guiding information make it difficult for users to confidently choose the right products.
+Users are overwhelmed by too many choices and irrelevant search results. They lack the guidance and comparison tools necessary to make confident purchasing decisions.
 
 
 ===== UX RECOMMENDATION =====
 
-1. Improve Product Selection Guidance: Introduce a clear, side-by-side product comparison tool that allows users to easily evaluate similar products. Optimize search relevance to prevent users from being overwhelmed by irrelevant results, and add filtering options and guides to help them select the best items.
-2. Improve Price Transparency: Display complete pricing information, including any additional delivery charges, early in the user flow (e.g., on product pages or cart screens) rather than only at final checkout.
-3. Improve Delivery Transparency: Show estimated delivery times prominently on both the homepage/product page and before order confirmation to set clear user expectations.
+1. Improve the search algorithm to filter out irrelevant results and offer easy-to-use search filters.
+2. Introduce a side-by-side comparison feature for similar products to help users easily compare pricing, sizes, and nutritional information.
+3. Incorporate guidance tags (e.g., "Best Value", "Highly Rated") to assist users in making quick, informed selection decisions.
+4. Display accurate and upfront product pricing, inclusive of delivery charges, early in the shopping flow (e.g., in the shopping cart) to prevent unexpected final amounts.
+5. Make estimated delivery times highly visible on both product and pre-checkout screens, allowing users to know delivery times before they place an order.

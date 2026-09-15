@@ -151,40 +151,79 @@ def answer_research_question(question, data):
 
     matched_problem = None
 
+    # Check whether the user explicitly mentioned a UX problem
     for problem in problems:
         if problem["name"].lower() in q:
             matched_problem = problem
             break
 
+    # Use previous context only for follow-up questions
+    follow_up_words = [
+        "it",
+        "this",
+        "that",
+        "this problem",
+        "that problem",
+        "the issue",
+    ]
+
+    if matched_problem is None and any(
+        word in q.split() for word in ["it", "this", "that"]
+    ):
+        previous_problem = st.session_state.get("last_research_problem")
+
+        if previous_problem:
+            for problem in problems:
+                if problem["name"] == previous_problem:
+                    matched_problem = problem
+                    break
+
+    # Total users
     if "total" in q and "user" in q:
         return f"There are {total} users in the research dataset."
 
+    # Affected users
     if matched_problem and (
         "how many" in q
         or "affected" in q
         or "users" in q
     ):
+        st.session_state["last_research_problem"] = matched_problem["name"]
+
         return (
             f"{matched_problem['name']} affects "
             f"{matched_problem['affected']} out of {total} users "
             f"({matched_problem['percentage']}%)."
         )
 
+    # Priority / why important
     if matched_problem and (
         "why" in q
         or "priority" in q
         or "important" in q
     ):
+        st.session_state["last_research_problem"] = matched_problem["name"]
+
         return (
             f"{matched_problem['name']} is rated "
             f"{matched_problem['priority']} priority with a "
             f"priority score of {matched_problem['score']}/30. "
             f"It affects {matched_problem['affected']} users "
-            f"({matched_problem['percentage']}%)."
+            f"({matched_problem['percentage']}%). "
+            f"Its severity is {matched_problem['severity']}/10 "
+            f"and its business impact is "
+            f"{matched_problem['business_impact']}/10."
         )
 
-    if "most" in q or "highest" in q or "biggest" in q:
+    # Most affected problem
+    if (
+        "most" in q
+        or "highest" in q
+        or "biggest" in q
+    ):
         top = max(problems, key=lambda x: x["affected"])
+
+        st.session_state["last_research_problem"] = top["name"]
 
         return (
             f"The most widely affected problem is "
@@ -192,6 +231,7 @@ def answer_research_question(question, data):
             f"out of {total} users ({top['percentage']}%)."
         )
 
+    # List problems
     if "problems" in q or "issues" in q:
         problem_list = ", ".join(
             f"{p['name']} ({p['affected']} users, {p['percentage']}%)"
@@ -610,6 +650,9 @@ if "analysis_data" not in st.session_state:
 
 if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = []
+
+if "last_research_problem" not in st.session_state:
+    st.session_state["last_research_problem"] = None
 
 
 # ---------------------------------------------------------

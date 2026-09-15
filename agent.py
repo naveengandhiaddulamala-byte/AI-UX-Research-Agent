@@ -4,33 +4,52 @@ from google import genai
 from google.genai import types
 
 
-# ---------- LOAD ENVIRONMENT VARIABLES ----------
+# =========================================================
+# LOAD ENVIRONMENT VARIABLES
+# =========================================================
+
 load_dotenv()
 
+api_key = os.environ.get("GEMINI_API_KEY")
 
-# ---------- TOOL 1: READ REVIEWS ----------
+if not api_key:
+    raise ValueError(
+        "GEMINI_API_KEY was not found. Check your .env file."
+    )
+
+client = genai.Client(api_key=api_key)
+
+
+# =========================================================
+# TOOL 1: READ REVIEWS
+# =========================================================
+
 def read_reviews():
-    """Read the UX research reviews from reviews.txt."""
+    """Read UX research reviews from reviews.txt."""
 
     with open("reviews.txt", "r", encoding="utf-8") as file:
         return file.read()
 
 
-# ---------- TOOL 2: PARSE REVIEWS ----------
+# =========================================================
+# TOOL 2: PARSE REVIEWS
+# =========================================================
+
 def parse_reviews():
-    """Read reviews.txt and separate each review into an individual user record."""
+    """Separate each review into an individual user record."""
 
     reviews = []
 
     with open("reviews.txt", "r", encoding="utf-8") as file:
-
         for line in file:
             line = line.strip()
 
             if not line:
                 continue
 
-            # Split only at the first colon
+            if ":" not in line:
+                continue
+
             user, review = line.split(":", 1)
 
             reviews.append({
@@ -41,14 +60,16 @@ def parse_reviews():
     return reviews
 
 
-# ---------- TOOL 3: COUNT UX PROBLEMS ----------
+# =========================================================
+# TOOL 3: COUNT UX PROBLEMS
+# =========================================================
+
 def count_ux_problems(classifications):
     """Count how many users are affected by each UX problem."""
 
     problem_counts = {}
 
     for item in classifications:
-
         problem = item["problem"]
 
         if problem not in problem_counts:
@@ -59,17 +80,23 @@ def count_ux_problems(classifications):
     return problem_counts
 
 
-# ---------- TOOL 4: CALCULATE PERCENTAGE ----------
+# =========================================================
+# TOOL 4: CALCULATE PERCENTAGE
+# =========================================================
+
 def calculate_percentage(part, total):
     """Calculate the percentage of users affected."""
 
     if total == 0:
         return 0
 
-    return (part / total) * 100
+    return round((part / total) * 100, 2)
 
 
-# ---------- TOOL 5: SAVE REPORT ----------
+# =========================================================
+# TOOL 5: SAVE REPORT
+# =========================================================
+
 def save_report(report):
     """Save the final UX research report to report.txt."""
 
@@ -78,14 +105,17 @@ def save_report(report):
 
     return "Report successfully saved to report.txt"
 
-def save_report(report):
-    ...
-    return "Report successfully saved to report.txt"
 
+# =========================================================
+# TOOL 6: CALCULATE PRIORITY SCORE
+# =========================================================
 
-# ---------- TOOL 6: CALCULATE PRIORITY SCORE ----------
 def calculate_priority_score(frequency_score, severity, business_impact):
     """Calculate the UX problem priority score."""
+
+    frequency_score = int(frequency_score)
+    severity = int(severity)
+    business_impact = int(business_impact)
 
     score = frequency_score + severity + business_impact
 
@@ -104,53 +134,106 @@ def calculate_priority_score(frequency_score, severity, business_impact):
     }
 
 
-# ---------- GEMINI ----------
+# =========================================================
+# TOOL 7: PROCESS UX ANALYSIS
+# =========================================================
 
 
-# ---------- GEMINI ----------
-api_key = os.environ.get("GEMINI_API_KEY")
+def process_ux_analysis(classifications, assessments):
+    """
+    Perform deterministic UX calculations in Python.
 
-if not api_key:
-    raise ValueError(
-        "GEMINI_API_KEY was not found. Check your .env file."
+    Gemini supplies the understanding/classification and
+    evidence-based severity/business-impact assessments.
+    Python performs counting, percentages, frequency scores,
+    and priority calculations.
+    """
+
+    reviews = parse_reviews()
+    total_users = len(reviews)
+
+    problem_counts = count_ux_problems(classifications)
+
+    assessment_map = {
+        item["problem"]: item
+        for item in assessments
+    }
+
+    results = []
+
+    for problem, affected_users in problem_counts.items():
+
+        percentage = calculate_percentage(
+            affected_users,
+            total_users
+        )
+
+        # Convert percentage to the 0-10 frequency score.
+        frequency_score = min(
+            10,
+            int(round(percentage / 10))
+        )
+
+        assessment = assessment_map.get(problem, {})
+
+        severity = max(
+            1,
+            min(10, int(assessment.get("severity", 5)))
+        )
+
+        business_impact = max(
+            1,
+            min(10, int(assessment.get("business_impact", 5)))
+        )
+
+        priority_result = calculate_priority_score(
+            frequency_score,
+            severity,
+            business_impact
+        )
+
+        users = [
+            item["user"]
+            for item in classifications
+            if item["problem"] == problem
+        ]
+
+        results.append({
+            "problem": problem,
+            "affected_users": affected_users,
+            "percentage": percentage,
+            "frequency_score": frequency_score,
+            "severity": severity,
+            "business_impact": business_impact,
+            "priority_score": priority_result["score"],
+            "priority": priority_result["priority"],
+            "users": users
+        })
+
+    results.sort(
+        key=lambda item: item["priority_score"],
+        reverse=True
     )
 
-client = genai.Client(api_key=api_key)
+    return {
+        "total_users": total_users,
+        "problems": results
+    }
 
 
-# ---------- TOOL DEFINITIONS ----------
-tools = types.Tool(
+# =========================================================
+# GEMINI TOOL DEFINITION
+# =========================================================
+
+analysis_tool = types.Tool(
     function_declarations=[
-
-        # TOOL 1: READ REVIEWS
         types.FunctionDeclaration(
-            name="read_reviews",
-            description="Reads the grocery app user reviews from reviews.txt.",
-            parameters=types.Schema(
-                type="OBJECT",
-                properties={}
-            )
-        ),
-
-        # TOOL 2: PARSE REVIEWS
-        types.FunctionDeclaration(
-            name="parse_reviews",
+            name="process_ux_analysis",
             description=(
-                "Reads reviews.txt and separates the reviews into "
-                "individual users and review text."
-            ),
-            parameters=types.Schema(
-                type="OBJECT",
-                properties={}
-            )
-        ),
-
-        # TOOL 3: COUNT UX PROBLEMS
-        types.FunctionDeclaration(
-            name="count_ux_problems",
-            description=(
-                "Counts how many users are affected by each UX problem "
-                "using the AI's classifications."
+                "Processes Gemini's UX classifications and evidence-based "
+                "severity/business-impact assessments. Python calculates "
+                "affected-user counts, percentages, frequency scores, "
+                "priority scores, and priority levels."
             ),
             parameters=types.Schema(
                 type="OBJECT",
@@ -158,8 +241,9 @@ tools = types.Tool(
                     "classifications": types.Schema(
                         type="ARRAY",
                         description=(
-                            "List of users and the UX problem identified "
-                            "in each review."
+                            "Every user-to-UX-problem classification. "
+                            "A user may appear more than once only when the "
+                            "review clearly contains multiple UX problems."
                         ),
                         items=types.Schema(
                             type="OBJECT",
@@ -170,442 +254,188 @@ tools = types.Tool(
                                 ),
                                 "problem": types.Schema(
                                     type="STRING",
-                                    description="UX problem identified in the review."
+                                    description="UX problem identified."
                                 )
                             },
                             required=["user", "problem"]
                         )
-                    )
-                },
-                required=["classifications"]
-            )
-        ),
-
-        # TOOL 4: CALCULATE PERCENTAGE
-        types.FunctionDeclaration(
-            name="calculate_percentage",
-            description=(
-                "Calculates what percentage one number represents "
-                "out of another."
-            ),
-            parameters=types.Schema(
-                type="OBJECT",
-                properties={
-                    "part": types.Schema(
-                        type="NUMBER",
-                        description="Number of users affected by an issue."
                     ),
-                    "total": types.Schema(
-                        type="NUMBER",
-                        description="Total number of users."
-                    )
-                },
-                required=["part", "total"]
-            )
-        ),
-
-        # TOOL 5: SAVE REPORT
-        types.FunctionDeclaration(
-            name="save_report",
-            description="Saves the final UX research report into report.txt.",
-            parameters=types.Schema(
-                type="OBJECT",
-                properties={
-                    "report": types.Schema(
-                        type="STRING",
-                        description="The complete final UX research report."
-                    )
-                },
-                required=["report"]
-            )
-        ),
-                # TOOL 6: CALCULATE PRIORITY SCORE
-        types.FunctionDeclaration(
-            name="calculate_priority_score",
-            description=(
-                "Calculates the priority score and priority level "
-                "of a UX problem using frequency, severity, "
-                "and business impact scores."
-            ),
-            parameters=types.Schema(
-                type="OBJECT",
-                properties={
-                    "frequency_score": types.Schema(
-                        type="NUMBER",
+                    "assessments": types.Schema(
+                        type="ARRAY",
                         description=(
-                            "Frequency score from 0 to 10, "
-                            "based on the percentage of users affected."
+                            "One evidence-based assessment for every major "
+                            "UX problem identified."
+                        ),
+                        items=types.Schema(
+                            type="OBJECT",
+                            properties={
+                                "problem": types.Schema(
+                                    type="STRING",
+                                    description="UX problem name."
+                                ),
+                                "severity": types.Schema(
+                                    type="NUMBER",
+                                    description="Severity from 1 to 10."
+                                ),
+                                "business_impact": types.Schema(
+                                    type="NUMBER",
+                                    description="Business impact from 1 to 10."
+                                )
+                            },
+                            required=[
+                                "problem",
+                                "severity",
+                                "business_impact"
+                            ]
                         )
-                    ),
-                    "severity": types.Schema(
-                        type="NUMBER",
-                        description="Severity score from 1 to 10."
-                    ),
-                    "business_impact": types.Schema(
-                        type="NUMBER",
-                        description="Business impact score from 1 to 10."
                     )
                 },
-                required=[
-                    "frequency_score",
-                    "severity",
-                    "business_impact"
-                ]
+                required=["classifications", "assessments"]
             )
         )
     ]
 )
 
 
-# ---------- USER QUESTION ----------
-user_question = input(
-    "What would you like the UX agent to analyze? "
-)
+# =========================================================
+# MAIN AGENT FUNCTION
+# =========================================================
 
 
-# ---------- AGENT INSTRUCTIONS ----------
-prompt = f"""
+def run_ux_research(user_question, reviews_text=None):
+    """Run the optimized V4 UX research workflow."""
+
+    # If Streamlit supplied uploaded/sample reviews,
+    # save them so the existing Python tools can process them.
+    if reviews_text:
+        with open("reviews.txt", "w", encoding="utf-8") as file:
+            file.write(reviews_text)
+
+    reviews = parse_reviews()
+
+    if not reviews:
+        raise ValueError("No valid reviews were found to analyze.")
+
+    review_text = "\n".join(
+        f'{item["user"]}: {item["review"]}'
+        for item in reviews
+    )
+
+    # =====================================================
+    # STEP 1: GEMINI UNDERSTANDS THE REVIEWS
+    # =====================================================
+
+    prompt = f"""
 You are an AI UX Research Agent.
 
-Your job is to analyze grocery app user reviews
-and answer the user's research question.
+Analyze the following user reviews and answer the research question.
 
 USER'S QUESTION:
 {user_question}
 
+ACTUAL REVIEWS:
+{review_text}
 
-FOLLOW THIS WORKFLOW:
+Your first job is to understand the meaning of every review.
 
-1. Use the read_reviews tool to obtain the raw reviews.
+Identify ALL genuine UX problems described by the reviews.
+Do not invent problems that are not supported by the reviews.
 
-2. Use the parse_reviews tool to separate the reviews
-   into individual users.
+A single user may have multiple UX problems only when their review
+clearly describes multiple distinct issues.
 
-3. Analyze every individual review.
+Then assess EVERY major UX problem using:
 
-4. Identify the UX problem described by each user.
+1. Severity: 1-10
+   - Base this only on evidence from the reviews.
 
-5. Create classifications using this structure:
-
-   [
-       {{
-           "user": "User 1",
-           "problem": "Product Selection"
-       }},
-       {{
-           "user": "User 2",
-           "problem": "Pricing"
-       }}
-   ]
-
-6. Use the count_ux_problems tool with these classifications.
-
-7. Determine the total number of users/reviews.
-
-8. For each major UX problem, use the
-   calculate_percentage tool to calculate:
-
-   affected users / total users * 100
-
-9. For each UX problem, assess:
-
-   - Severity from 1 to 10 based only on evidence
-     from the actual reviews.
-
-   - Business impact from 1 to 10 based only on
-     evidence from the actual reviews and the
-     user's journey.
-
-   - Do not change or manipulate the actual
-     affected-user count or percentage.
-
-   - Frequency represents the actual research data.
-     Never increase, decrease, or manipulate frequency
-     because an issue appears more or less severe.
-
-10. For EVERY UX problem identified, send its
-    frequency score, severity score, and business
-    impact score to the calculate_priority_score tool.
-
-    Call the tool separately for each UX problem.
-
-11. Record the priority score and priority level
-    returned by Python for each UX problem.
-
-12. Rank ALL UX problems from highest priority
-    to lowest priority using the priority scores.
-
-13. Provide a specific UX recommendation for
-    each identified problem.
-
-
-
-
-FINAL REPORT FORMAT:
-
-===== UX RESEARCH REPORT =====
-
-USER QUESTION:
-[Repeat the user's question]
-
-TOTAL USERS:
-[Total number of users/reviews analyzed]
-
-
-UX PROBLEMS:
-
-1. [Problem name]
-
-   Affected users: [number]
-   Percentage: [percentage]%
-
-   Users:
-   - User [number]
-   - User [number]
-
-   Evidence:
-   - User [number]: "[short quote]"
-   - User [number]: "[short quote]"
-
-   Priority: [Frequency Score: [0–10]
-Severity: [1–10]
-Business Impact: [1–10]
-Priority Score: [score]/30
-Priority: [CRITICAL / HIGH / MEDIUM / LOW]
-
-Why this priority:
-[Explain why this issue received this priority based only
-on the review evidence.]]
-
-
-2. [Problem name]
-
-   Affected users: [number]
-   Percentage: [percentage]%
-
-   Users:
-   - User [number]
-   - User [number]
-
-   Evidence:
-   - User [number]: "[short quote]"
-   - User [number]: "[short quote]"
-
-   Priority: [Frequency Score: [0–10]
-Severity: [1–10]
-Business Impact: [1–10]
-Priority Score: [score]/30
-Priority: [CRITICAL / HIGH / MEDIUM / LOW]
-
-Why this priority:
-[Explain why this issue received this priority based only
-on the review evidence.]]
-
-
-===== TOP UX PRIORITY =====
-
-Problem:
-[Most important problem]
-
-Affected users:
-[number]
-
-Percentage:
-[percentage]%
-
-Why it matters:
-[Short explanation based on the reviews]
-
-
-===== UX RECOMMENDATION =====
-
-[Specific design recommendation based only on the research]
-
+2. Business impact: 1-10
+   - Base this only on evidence from the reviews and the user's journey.
 
 IMPORTANT:
-
-- Use only information from the actual reviews.
-- Do not invent users, numbers, or quotes.
-- Every affected-user count must be traceable to an actual review.
-- Every percentage must come from the calculate_percentage tool.
+- Do not calculate affected-user counts yourself.
 - Do not calculate percentages yourself.
-- Use Python tools for counting and numerical calculations.
-- Use Gemini to understand and classify the meaning of the reviews.
+- Do not calculate priority scores yourself.
+- Python will perform those calculations.
+- Do not invent users, reviews, numbers, or quotes.
+
+You MUST call the process_ux_analysis tool once after completing
+all classifications and assessments.
+
+The tool will calculate:
+- affected users
+- percentage
+- frequency score
+- priority score
+- priority level
 """
 
+    contents = [
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=prompt)]
+        )
+    ]
 
-# ---------- CONVERSATION HISTORY ----------
-contents = [
-    types.Content(
-        role="user",
-        parts=[
-            types.Part.from_text(text=prompt)
-        ]
-    )
-]
-
-
-# ---------- AGENT LOOP ----------
-while True:
+    print("🧠 Gemini is understanding the user reviews...")
 
     response = client.models.generate_content(
         model="gemini-3.5-flash",
         contents=contents,
         config=types.GenerateContentConfig(
-            tools=[tools]
+            tools=[analysis_tool]
         )
     )
 
-    # Add Gemini's response to conversation history
+    # =====================================================
+    # STEP 2: PYTHON CALCULATES
+    # =====================================================
+
+    if not response.function_calls:
+        raise RuntimeError(
+            "Gemini did not call the UX analysis tool."
+        )
+
     contents.append(response.candidates[0].content)
 
-    # If Gemini doesn't request a tool, analysis is finished
-    if not response.function_calls:
-        break
-
-    # Store all tool responses
     tool_parts = []
 
-    # Handle every requested tool
     for function_call in response.function_calls:
 
-        # ---------- READ REVIEWS ----------
-        if function_call.name == "read_reviews":
+        if function_call.name != "process_ux_analysis":
+            continue
 
-            print("📄 Agent is reading the reviews...")
+        classifications = function_call.args["classifications"]
+        assessments = function_call.args["assessments"]
 
-            result = read_reviews()
+        print("🧮 Python is calculating UX metrics...")
+        print(f"👥 Classifications received: {len(classifications)}")
 
-            tool_parts.append(
-                types.Part.from_function_response(
-                    name="read_reviews",
-                    response={
-                        "result": result
-                    }
-                )
-            )
+        analysis = process_ux_analysis(
+            classifications,
+            assessments
+        )
 
-
-        # ---------- PARSE REVIEWS ----------
-        elif function_call.name == "parse_reviews":
-
-            print("🔎 Agent is parsing individual reviews...")
-
-            result = parse_reviews()
-
-            print(f"👥 Parsed {len(result)} individual reviews.")
-
-            tool_parts.append(
-                types.Part.from_function_response(
-                    name="parse_reviews",
-                    response={
-                        "result": result
-                    }
-                )
-            )
-
-
-        # ---------- COUNT UX PROBLEMS ----------
-        elif function_call.name == "count_ux_problems":
-
-            print("📊 Agent is counting users affected by each UX problem...")
-
-            classifications = function_call.args["classifications"]
-
-            result = count_ux_problems(classifications)
-
-            print(f"📊 UX problem counts: {result}")
-
-            tool_parts.append(
-                types.Part.from_function_response(
-                    name="count_ux_problems",
-                    response={
-                        "result": result
-                    }
-                )
-            )
-
-
-        # ---------- CALCULATE PERCENTAGE ----------
-        elif function_call.name == "calculate_percentage":
-
-            part = function_call.args["part"]
-            total = function_call.args["total"]
-
+        for item in analysis["problems"]:
             print(
-                f"🧮 Agent is calculating: "
-                f"{part} out of {total}"
+                f"🎯 {item['problem']}: "
+                f"{item['percentage']}% → "
+                f"{item['priority_score']}/30 → "
+                f"{item['priority']}"
             )
 
-            result = calculate_percentage(part, total)
-
-            print(f"📊 Result: {result}%")
-
-            tool_parts.append(
-                types.Part.from_function_response(
-                    name="calculate_percentage",
-                    response={
-                        "result": result
-                    }
-                )
+        tool_parts.append(
+            types.Part.from_function_response(
+                name="process_ux_analysis",
+                response={"result": analysis}
             )
+        )
 
+    if not tool_parts:
+        raise RuntimeError(
+            "Gemini did not provide valid UX analysis data."
+        )
 
-        # ---------- SAVE REPORT ----------
-        elif function_call.name == "save_report":
-
-            report = function_call.args["report"]
-
-            print("💾 Agent is saving the UX research report...")
-
-            result = save_report(report)
-
-            print("✅ Report saved successfully.")
-
-            tool_parts.append(
-                types.Part.from_function_response(
-                    name="save_report",
-                    response={
-                        "result": result
-                    }
-                )
-            )
-                    # ---------- CALCULATE PRIORITY SCORE ----------
-        elif function_call.name == "calculate_priority_score":
-
-            frequency_score = function_call.args["frequency_score"]
-            severity = function_call.args["severity"]
-            business_impact = function_call.args["business_impact"]
-
-            print(
-                f"🎯 Calculating priority: "
-                f"Frequency={frequency_score}, "
-                f"Severity={severity}, "
-                f"Business Impact={business_impact}"
-            )
-
-            result = calculate_priority_score(
-                frequency_score,
-                severity,
-                business_impact
-            )
-
-            print(
-                f"🎯 Priority Score: {result['score']}/30 "
-                f"→ {result['priority']}"
-            )
-
-            tool_parts.append(
-                types.Part.from_function_response(
-                    name="calculate_priority_score",
-                    response={
-                        "result": result
-                    }
-                )
-            )
-
-
-    # Add tool results back to Gemini
     contents.append(
         types.Content(
             role="tool",
@@ -613,8 +443,114 @@ while True:
         )
     )
 
+    # =====================================================
+    # STEP 3: GEMINI EXPLAINS THE RESULTS
+    # =====================================================
 
-# ---------- FINAL RESULT ----------
-print("\n===== UX RESEARCH AGENT =====\n")
-print(response.text)
-print(calculate_priority_score(3, 7, 8))
+    explanation_prompt = """
+Using the Python-calculated UX analysis returned by the tool,
+write the final UX research report.
+
+Do NOT change any Python-calculated numbers.
+Do NOT recalculate percentages or priority scores.
+
+Explain why each severity and business-impact assessment makes sense
+using only evidence from the actual reviews.
+
+Rank all UX problems from highest priority to lowest priority.
+
+For every problem provide:
+- affected users
+- percentage
+- users affected
+- evidence from reviews
+- frequency score
+- severity
+- business impact
+- priority score
+- priority level
+- why this priority matters
+- a specific UX recommendation
+
+Use this format:
+
+===== UX RESEARCH REPORT =====
+
+USER QUESTION:
+[question]
+
+TOTAL USERS:
+[number]
+
+UX PROBLEMS:
+
+1. [Problem name]
+
+Affected users: [number]
+Percentage: [percentage]%
+
+Users:
+- User [number]
+
+Evidence:
+- User [number]: "[short quote]"
+
+Frequency Score: [0-10]
+Severity: [1-10]
+Business Impact: [1-10]
+Priority Score: [score]/30
+Priority: [CRITICAL / HIGH / MEDIUM / LOW]
+
+Why this priority:
+[Explanation]
+
+UX Recommendation:
+[Specific recommendation]
+
+Repeat for ALL identified problems.
+
+===== TOP UX PRIORITY =====
+
+Problem: [highest priority problem]
+Affected users: [number]
+Percentage: [percentage]%
+Why it matters: [short explanation]
+
+===== END REPORT =====
+"""
+
+    contents.append(
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=explanation_prompt)]
+        )
+    )
+
+    print("💡 Gemini is explaining the calculated results...")
+
+    final_response = client.models.generate_content(
+        model="gemini-3.5-flash",
+        contents=contents
+    )
+
+    final_report = final_response.text
+
+    save_report(final_report)
+
+    print("💾 Report saved successfully.")
+
+    return final_report
+
+
+# =========================================================
+# DIRECT TEST
+# =========================================================
+
+if __name__ == "__main__":
+
+    result = run_ux_research(
+        "Analyze the UX problems in these reviews"
+    )
+
+    print("\n===== UX RESEARCH AGENT =====\n")
+    print(result)

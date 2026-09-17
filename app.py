@@ -168,7 +168,13 @@ def answer_research_question(question, data):
     if "total" in q and "user" in q:
         return f"There are {total} users in the research dataset."
 
-    if matched_problem and ("how many" in q or "affected" in q or "users" in q):
+    if matched_problem and (
+    "how many" in q
+    or (
+        "affected" in q
+        and "which users" not in q
+    )
+):
         st.session_state["last_research_problem"] = matched_problem["name"]
         return (
             f"{matched_problem['name']} affects {matched_problem['affected']} "
@@ -184,6 +190,44 @@ def answer_research_question(question, data):
             f"({matched_problem['percentage']}%). Its severity is "
             f"{matched_problem['severity']}/10 and its business impact is "
             f"{matched_problem['business_impact']}/10."
+        )
+        # V4.3 — Which users are affected?
+    if matched_problem and (
+        "which users" in q
+        or "who" in q
+        or "show users" in q
+    ):
+        st.session_state["last_research_problem"] = matched_problem["name"]
+
+        users = ", ".join(matched_problem["users"])
+
+        return (
+            f"{matched_problem['name']} affects "
+            f"{matched_problem['affected']} users: {users}."
+        )
+
+    # V4.3 — Show research evidence
+    if matched_problem and (
+        "evidence" in q
+        or "quotes" in q
+        or "feedback" in q
+        or "what did they say" in q
+    ):
+        st.session_state["last_research_problem"] = matched_problem["name"]
+
+        evidence_lines = []
+
+        for user, evidence in zip(
+            matched_problem["users"],
+            matched_problem["evidence"]
+        ):
+            evidence_lines.append(
+                f'{user}: "{evidence}"'
+            )
+
+        return (
+            f"Evidence for {matched_problem['name']}:\n\n"
+            + "\n\n".join(evidence_lines)
         )
 
     # V4.2 — UX recommendations.

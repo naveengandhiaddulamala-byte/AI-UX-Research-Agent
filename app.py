@@ -140,199 +140,106 @@ def run_local_demo(text):
         "mode": "LOCAL V4.3 DEMO",
     }
 def answer_research_question(question, data):
-
+    """Answer UX research questions using the existing analysis data."""
     q = question.lower().strip()
-
     if not data or not data.get("problems"):
         return "I don't have enough research data to answer that question yet."
 
     problems = data["problems"]
     total = data["total"]
-
     matched_problem = None
 
-    # Check whether the user explicitly mentioned a UX problem
     for problem in problems:
         if problem["name"].lower() in q:
             matched_problem = problem
             break
 
-    # Use previous context only for follow-up questions
-    follow_up_words = [
-        "it",
-        "this",
-        "that",
-        "this problem",
-        "that problem",
-        "the issue",
-    ]
-
-    if matched_problem is None and any(
-        word in q.split() for word in ["it", "this", "that"]
-    ):
+    # V4.1 — context-aware follow-up questions.
+    follow_up_words = {"it", "this", "that"}
+    question_words = set(q.replace("?", "").replace(".", "").split())
+    if matched_problem is None and follow_up_words.intersection(question_words):
         previous_problem = st.session_state.get("last_research_problem")
-
         if previous_problem:
             for problem in problems:
                 if problem["name"] == previous_problem:
                     matched_problem = problem
                     break
 
-    # Total users
     if "total" in q and "user" in q:
         return f"There are {total} users in the research dataset."
 
-    # Affected users
-    if matched_problem and (
-        "how many" in q
-        or "affected" in q
-        or "users" in q
-    ):
+    if matched_problem and ("how many" in q or "affected" in q or "users" in q):
         st.session_state["last_research_problem"] = matched_problem["name"]
-
         return (
-            f"{matched_problem['name']} affects "
-            f"{matched_problem['affected']} out of {total} users "
-            f"({matched_problem['percentage']}%)."
+            f"{matched_problem['name']} affects {matched_problem['affected']} "
+            f"out of {total} users ({matched_problem['percentage']}%)."
         )
 
-    # Priority / why important
-    if matched_problem and (
-        "why" in q
-        or "priority" in q
-        or "important" in q
-    ):
+    if matched_problem and ("why" in q or "priority" in q or "important" in q):
         st.session_state["last_research_problem"] = matched_problem["name"]
-
         return (
-            f"{matched_problem['name']} is rated "
-            f"{matched_problem['priority']} priority with a "
-            f"priority score of {matched_problem['score']}/30. "
+            f"{matched_problem['name']} is rated {matched_problem['priority']} priority "
+            f"with a priority score of {matched_problem['score']}/30. "
             f"It affects {matched_problem['affected']} users "
-            f"({matched_problem['percentage']}%). "
-            f"Its severity is {matched_problem['severity']}/10 "
-            f"and its business impact is "
+            f"({matched_problem['percentage']}%). Its severity is "
+            f"{matched_problem['severity']}/10 and its business impact is "
             f"{matched_problem['business_impact']}/10."
         )
 
-    # Most affected problem
-    if (
-        "most" in q
-        or "highest" in q
-        or "biggest" in q
+    # V4.2 — UX recommendations.
+    if matched_problem and (
+        "recommend" in q or "recommendation" in q or "solution" in q
+        or "solve" in q or "improve" in q or "fix" in q
+        or "what should we do" in q
     ):
+        st.session_state["last_research_problem"] = matched_problem["name"]
+        recommendations = {
+            "Price Transparency": (
+                "Show the complete price breakdown earlier in the journey, including "
+                "delivery charges and other fees before checkout. Keep the displayed "
+                "price consistent from product selection through payment."
+            ),
+            "Delivery Information": (
+                "Show the estimated delivery time before the user places the order. "
+                "Keep the ETA clearly visible on the product, cart, and checkout screens."
+            ),
+            "Search Functionality": (
+                "Improve search relevance and filtering so users see results that better "
+                "match what they are looking for."
+            ),
+            "Product Selection": (
+                "Add clearer product guidance and comparison support so users can understand "
+                "differences between similar products and choose confidently."
+            ),
+        }
+        recommendation = recommendations.get(
+            matched_problem["name"],
+            "Review the evidence behind this problem, identify the main friction point, "
+            "prototype an improved experience, and validate the solution with users before implementation."
+        )
+        return f"Recommendation for {matched_problem['name']}: {recommendation}"
+
+    if "most" in q or "highest" in q or "biggest" in q or "fix first" in q:
         top = max(problems, key=lambda x: x["affected"])
-
         st.session_state["last_research_problem"] = top["name"]
-
         return (
-            f"The most widely affected problem is "
-            f"{top['name']}, affecting {top['affected']} "
-            f"out of {total} users ({top['percentage']}%)."
+            f"The most widely affected problem is {top['name']}, affecting "
+            f"{top['affected']} out of {total} users ({top['percentage']}%)."
         )
 
-    # List problems
     if "problems" in q or "issues" in q:
         problem_list = ", ".join(
-            f"{p['name']} ({p['affected']} users, {p['percentage']}%)"
-            for p in problems
+            f"{p['name']} ({p['affected']} users, {p['percentage']}%)" for p in problems
         )
-
         return f"The identified UX problems are: {problem_list}."
 
     return (
-        "I can answer questions about total users, affected users, "
-        "UX problems, priority, severity and business impact."
+        "I can answer questions about total users, affected users, UX problems, priority, "
+        "severity, business impact, and UX recommendations."
     )
 
+
 def build_local_report(data):
-    def answer_research_question(question, data):
-        """
-        Answer a user's research question using the existing UX analysis data.
-        """
-
-        q = question.lower().strip()
-
-        if not data or not data.get("problems"):
-            return "I don't have enough research data to answer that question yet."
-
-        problems = data["problems"]
-        total = data["total"]
-
-        # Find the problem mentioned in the question
-        matched_problem = None
-
-        for problem in problems:
-            if problem["name"].lower() in q:
-                matched_problem = problem
-                break
-
-        # Total users
-        if "total" in q and "user" in q:
-            return f"There are {total} users in the research dataset."
-
-        # How many users are affected
-        if matched_problem and (
-            "how many" in q
-            or "affected" in q
-            or "users" in q
-        ):
-            return (
-                f"{matched_problem['name']} affects "
-                f"{matched_problem['affected']} out of {total} users "
-                f"({matched_problem['percentage']}%)."
-            )
-
-        # Why is a problem high priority?
-        if matched_problem and (
-            "why" in q
-            or "priority" in q
-            or "important" in q
-        ):
-            return (
-                f"{matched_problem['name']} is rated "
-                f"{matched_problem['priority']} priority with a "
-                f"priority score of {matched_problem['score']}/30. "
-                f"It affects {matched_problem['affected']} users "
-                f"({matched_problem['percentage']}%). "
-                f"Its severity is {matched_problem['severity']}/10 "
-                f"and its business impact is "
-                f"{matched_problem['business_impact']}/10."
-            )
-
-        # Most affected problem
-        if (
-            "most" in q
-            or "highest" in q
-            or "biggest" in q
-            or "main problem" in q
-        ):
-            top = max(problems, key=lambda x: x["affected"])
-
-            return (
-                f"The most widely affected problem is "
-                f"{top['name']}, affecting {top['affected']} "
-                f"out of {total} users ({top['percentage']}%)."
-            )
-
-        # List problems
-        if (
-            "problems" in q
-            or "issues" in q
-            or "issues users face" in q
-        ):
-            problem_list = ", ".join(
-                f"{p['name']} ({p['affected']} users, {p['percentage']}%)"
-                for p in problems
-            )
-
-            return f"The identified UX problems are: {problem_list}."
-
-        return (
-            "I can answer questions about total users, affected users, "
-            "UX problems, priority, severity and business impact."
-        )
-
     lines = [
         "===== UX RESEARCH REPORT =====",
         "",
@@ -1170,13 +1077,17 @@ with right:
             st.divider()
 
     # Question input
-    question = st.text_input(
-        "Ask your research question",
-        placeholder="Ask anything about your UX research...",
-        key="research_question"
-    )
+    with st.form("research_chat_form", clear_on_submit=True):
+        question = st.text_input(
+            "Ask your research question",
+            placeholder="Ask anything about your UX research..."
+        )
+        ask_clicked = st.form_submit_button(
+            "Ask AI Researcher",
+            use_container_width=True
+        )
 
-    if question:
+    if ask_clicked and question.strip():
         answer = answer_research_question(
             question,
             st.session_state["analysis_data"]
@@ -1186,6 +1097,7 @@ with right:
             "question": question,
             "answer": answer
         })
+        st.rerun()
 
     q1 = st.button(
         "🎯 Why is Price Transparency high priority?",
@@ -1255,33 +1167,6 @@ with right:
 
         </div>
         """)
-        # Conversation history
-question = ""
-
-if st.session_state["chat_history"]:
-    st.markdown("### 💬 Conversation")
-
-    for chat in st.session_state["chat_history"]:
-        st.markdown(f"**You:** {chat['question']}")
-        st.markdown(f"**AI Researcher:** {chat['answer']}")
-        st.divider()
-
-    question = st.text_input(
-        "Ask your research question",
-        placeholder="Ask anything about your UX research..."
-    )
-
-if question:
-
-    answer = run_local_demo(question)
-
-    st.session_state["chat_history"].append({
-        "question": question,
-        "answer": answer
-    })
-    st.rerun()
-
-
 # ---------------------------------------------------------
 # FOOTER CTA
 # ---------------------------------------------------------

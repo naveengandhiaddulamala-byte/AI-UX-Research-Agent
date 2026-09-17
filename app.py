@@ -229,6 +229,72 @@ def answer_research_question(question, data):
             f"Evidence for {matched_problem['name']}:\n\n"
             + "\n\n".join(evidence_lines)
         )
+        # V4.4 — Design Action Plan
+    if matched_problem and (
+        "change in the ui" in q
+        or "change in ui" in q
+        or "design action" in q
+        or "design plan" in q
+        or "ui changes" in q
+        or "redesign" in q
+        or "what should i change" in q
+    ):
+        st.session_state["last_research_problem"] = matched_problem["name"]
+
+        design_actions = {
+            "Price Transparency": [
+                "Product Page: Show the complete product price clearly before users add the item to the cart.",
+                "Cart: Display delivery charges and additional fees before checkout.",
+                "Checkout: Show an itemized final-price breakdown.",
+                "Consistency: Keep the displayed price consistent across product, cart, and payment screens.",
+                "Validation: Test the redesigned pricing flow with users who experienced price confusion."
+            ],
+
+            "Delivery Information": [
+                "Product Page: Show the estimated delivery time before users add the product to the cart.",
+                "Cart: Keep the delivery estimate visible while users review their order.",
+                "Checkout: Confirm the expected delivery time before payment.",
+                "Status Visibility: Clearly communicate delivery timing and possible delays.",
+                "Validation: Test whether users can find the delivery estimate before ordering."
+            ],
+
+            "Search Functionality": [
+                "Search: Improve the relevance of search results.",
+                "Filters: Add useful filters to help users narrow down products.",
+                "Suggestions: Provide autocomplete and useful search suggestions.",
+                "No Results: Suggest alternatives or corrected search terms.",
+                "Validation: Test common grocery search tasks with users."
+            ],
+
+            "Product Selection": [
+                "Product Cards: Highlight important information for quick decision-making.",
+                "Comparison: Allow users to compare similar products.",
+                "Guidance: Add clearer categories, labels, and product information.",
+                "Recommendations: Help users choose when many similar options are available.",
+                "Validation: Test whether users can confidently choose between similar products."
+            ]
+        }
+
+        actions = design_actions.get(
+            matched_problem["name"],
+            [
+                "Review the evidence behind the UX problem.",
+                "Identify the main interface friction point.",
+                "Create a redesigned solution.",
+                "Prototype the improved experience.",
+                "Validate the prototype with users."
+            ]
+        )
+
+        action_list = "\n\n".join(
+            f"{i}. {action}"
+            for i, action in enumerate(actions, 1)
+        )
+
+        return (
+            f"Design Action Plan for {matched_problem['name']}:\n\n"
+            f"{action_list}"
+        )
 
     # V4.2 — UX recommendations.
     if matched_problem and (

@@ -55,8 +55,12 @@ def classify_local_review(review):
         problems.append("Search Functionality")
 
     if any(k in text for k in [
-        "product", "best for me", "too many products",
-        "guidance to choose", "compare similar"
+        "best for me",
+        "too many products",
+        "guidance to choose",
+        "compare similar",
+        "couldn't understand which",
+        "could not understand which"
     ]):
         problems.append("Product Selection")
 
@@ -228,6 +232,51 @@ def answer_research_question(question, data):
         return (
             f"Evidence for {matched_problem['name']}:\n\n"
             + "\n\n".join(evidence_lines)
+        )
+        # V4.6 — Research Summary
+    if (
+        "research summary" in q
+        or "summarize the research" in q
+        or "summary of this research" in q
+        or "what did we learn" in q
+        or "summarise the research" in q
+    ):
+        top_problem = max(
+            problems,
+            key=lambda x: x["score"]
+        )
+
+        problem_summary = "\n".join(
+            f"- {problem['name']}: "
+            f"{problem['affected']} users "
+            f"({problem['percentage']}%), "
+            f"{problem['priority']} priority"
+            for problem in problems
+        )
+
+        top_evidence = "\n".join(
+            f"- {evidence}"
+            for evidence in top_problem.get("evidence", [])
+        )
+
+        return (
+            f"UX Research Summary\n\n"
+            f"Total users analyzed: {total}\n\n"
+            f"Key UX Problems:\n"
+            f"{problem_summary}\n\n"
+            f"Top Priority: {top_problem['name']}\n"
+            f"Priority Score: {top_problem['score']}/30 "
+            f"({top_problem['priority']})\n"
+            f"Severity: {top_problem['severity']}/10\n"
+            f"Business Impact: "
+            f"{top_problem['business_impact']}/10\n\n"
+            f"Supporting Evidence:\n"
+            f"{top_evidence}\n\n"
+            f"Recommended Next Step:\n"
+            f"Prioritize {top_problem['name']} first, "
+            f"review the supporting user evidence, "
+            f"prototype an improved experience, and "
+            f"validate the solution with users."
         )
         # V4.5 — Evidence-to-Design Reasoning
     if matched_problem and (

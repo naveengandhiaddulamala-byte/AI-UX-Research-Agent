@@ -229,6 +229,39 @@ def answer_research_question(question, data):
             f"Evidence for {matched_problem['name']}:\n\n"
             + "\n\n".join(evidence_lines)
         )
+        # V4.5 — Evidence-to-Design Reasoning
+    if matched_problem and (
+        "why should we" in q
+        or "why should i" in q
+        or "why this change" in q
+        or "why this design" in q
+        or "reason for this" in q
+    ):
+        st.session_state["last_research_problem"] = matched_problem["name"]
+
+        evidence = matched_problem.get("evidence", [])
+
+        if evidence:
+            evidence_text = "\n\n".join(
+                f"- {quote}"
+                for quote in evidence
+            )
+
+            return (
+                f"Research reasoning for {matched_problem['name']}:\n\n"
+                f"The recommendation is supported by the following "
+                f"user evidence:\n\n"
+                f"{evidence_text}\n\n"
+                f"These findings show that users are experiencing "
+                f"friction related to {matched_problem['name']}. "
+                f"The suggested UI changes are intended to directly "
+                f"address the problems observed in this feedback."
+            )
+
+        return (
+            f"There is not enough user evidence available to explain "
+            f"the design reasoning for {matched_problem['name']}."
+        )
         # V4.4 — Design Action Plan
     if matched_problem and (
         "change in the ui" in q

@@ -233,7 +233,81 @@ def answer_research_question(question, data):
             f"Evidence for {matched_problem['name']}:\n\n"
             + "\n\n".join(evidence_lines)
         )
-        # V4.8 — Research Question Suggestions
+
+    research_gaps = {
+        "Price Transparency": {
+            "gap": (
+                "What pricing information do users expect "
+                "to see before checkout?"
+            ),
+            "methods": {
+                "Survey": (
+                    "Ask users what pricing information they "
+                    "expect to see before checkout."
+                ),
+                "Usability Test": (
+                    "Observe users moving from product selection "
+                    "to checkout to identify where pricing "
+                    "becomes unclear."
+                ),
+            },
+            "usability_task": (
+                "Ask users to find a product, review its price, "
+                "and complete checkout while commenting on what "
+                "pricing information they need before placing the order."
+            ),
+        }
+    }
+
+    # V4.9 — Research Gap Detection
+    if (
+        "research gap" in q
+        or "research gaps" in q
+        or "what don't we know" in q
+        or "what do we not know" in q
+        or "what is missing" in q
+    ):
+        if not matched_problem:
+            return (
+                "I can help with research gaps for a specific UX problem, "
+                "such as Price Transparency."
+            )
+
+        gap_data = research_gaps.get(matched_problem["name"])
+
+        if gap_data:
+            methods_text = "\n".join(
+                f"- {method}: {description}"
+                for method, description in gap_data["methods"].items()
+            )
+
+            st.session_state["last_research_problem"] = (
+                matched_problem["name"]
+            )
+
+            return (
+                f"Research Gaps — {matched_problem['name']}\n\n"
+                f"What we know:\n"
+                f"{matched_problem['affected']} users "
+                f"({matched_problem['percentage']}%) "
+                f"experienced this problem.\n\n"
+
+                f"What we still need to understand:\n"
+                f"{gap_data['gap']}\n\n"
+
+                f"Suggested Research Methods:\n"
+                f"{methods_text}\n\n"
+
+                f"Usability Test Task:\n"
+                f"{gap_data['usability_task']}"
+            )
+
+        return (
+            f"I don't have a defined research gap for "
+            f"{matched_problem['name']} yet."
+        )
+
+    # V4.8 — Research Question Suggestions
     if (
         "what should i investigate" in q
         or "what should we investigate" in q

@@ -233,6 +233,115 @@ def answer_research_question(question, data):
             f"Evidence for {matched_problem['name']}:\n\n"
             + "\n\n".join(evidence_lines)
         )
+            # V4.7 — Compare UX Problems
+    if "compare" in q:
+
+        selected_problems = []
+
+        for problem in problems:
+            if problem["name"].lower() in q:
+                selected_problems.append(problem)
+
+        if len(selected_problems) == 2:
+
+            problem_1 = selected_problems[0]
+            problem_2 = selected_problems[1]
+
+            evidence_1 = "\n".join(
+                f'- "{evidence}"'
+                for evidence in problem_1.get("evidence", [])
+            )
+
+            evidence_2 = "\n".join(
+                f'- "{evidence}"'
+                for evidence in problem_2.get("evidence", [])
+            )
+
+            comparison_points = []
+
+            if problem_1["affected"] == problem_2["affected"]:
+                comparison_points.append(
+                    f"Both problems affect the same number of users "
+                    f"({problem_1['affected']} users)."
+                )
+            else:
+                comparison_points.append(
+                    f"{problem_1['name']} affects "
+                    f"{problem_1['affected']} users, while "
+                    f"{problem_2['name']} affects "
+                    f"{problem_2['affected']} users."
+                )
+
+            if problem_1["severity"] == problem_2["severity"]:
+                comparison_points.append(
+                    f"Both problems have the same severity score "
+                    f"({problem_1['severity']}/10)."
+                )
+            else:
+                comparison_points.append(
+                    f"Severity scores: {problem_1['name']} "
+                    f"{problem_1['severity']}/10 and "
+                    f"{problem_2['name']} "
+                    f"{problem_2['severity']}/10."
+                )
+
+            if problem_1["business_impact"] == problem_2["business_impact"]:
+                comparison_points.append(
+                    f"Both problems have the same business impact score "
+                    f"({problem_1['business_impact']}/10)."
+                )
+            else:
+                comparison_points.append(
+                    f"Business impact scores: {problem_1['name']} "
+                    f"{problem_1['business_impact']}/10 and "
+                    f"{problem_2['name']} "
+                    f"{problem_2['business_impact']}/10."
+                )
+
+            comparison_text = "\n".join(
+                f"- {point}"
+                for point in comparison_points
+            )
+
+            return (
+                f"UX Problem Comparison\n\n"
+
+                f"{problem_1['name']}\n"
+                f"Affected Users: {problem_1['affected']} "
+                f"({problem_1['percentage']}%)\n"
+                f"Severity: {problem_1['severity']}/10\n"
+                f"Business Impact: "
+                f"{problem_1['business_impact']}/10\n"
+                f"Priority Score: {problem_1['score']}/30\n"
+                f"Priority: {problem_1['priority']}\n\n"
+
+                f"VS\n\n"
+
+                f"{problem_2['name']}\n"
+                f"Affected Users: {problem_2['affected']} "
+                f"({problem_2['percentage']}%)\n"
+                f"Severity: {problem_2['severity']}/10\n"
+                f"Business Impact: "
+                f"{problem_2['business_impact']}/10\n"
+                f"Priority Score: {problem_2['score']}/30\n"
+                f"Priority: {problem_2['priority']}\n\n"
+
+                f"Key Differences\n"
+                f"{comparison_text}\n\n"
+
+                f"Evidence — {problem_1['name']}\n"
+                f"{evidence_1}\n\n"
+
+                f"Evidence — {problem_2['name']}\n"
+                f"{evidence_2}"
+            )
+
+        return (
+            "Please mention exactly two UX problems to compare. "
+            "For example: Compare Price Transparency and "
+            "Delivery Information."
+        )
+        
         # V4.6 — Research Summary
     if (
         "research summary" in q

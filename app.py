@@ -252,9 +252,9 @@ def answer_research_question(question, data):
                 ),
             },
             "usability_task": (
-                "Ask users to find a product, review its price, "
-                "and complete checkout while commenting on what "
-                "pricing information they need before placing the order."
+                 "Choose a grocery product you would normally buy, "
+    "add it to your cart, and continue through the "
+    "purchase journey until the checkout screen."
             ),
         }
     }

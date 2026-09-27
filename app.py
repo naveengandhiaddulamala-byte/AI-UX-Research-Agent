@@ -1204,9 +1204,9 @@ if st.button(
                 "Something went wrong while analyzing the reviews. "
                 "Please try again."
             )
+            print("V5 ERROR:", repr(e))
 
             # Temporary debugging — terminal only
-            
 
 
 # ---------------------------------------------------------

@@ -233,6 +233,67 @@ def answer_research_question(question, data):
             f"Evidence for {matched_problem['name']}:\n\n"
             + "\n\n".join(evidence_lines)
         )
+        # V4.8 — Research Question Suggestions
+    if (
+        "what should i investigate" in q
+        or "what should we investigate" in q
+        or "what should i research" in q
+        or "what should we research" in q
+        or "what should i ask" in q
+        or "what should we explore" in q
+        or "what should i investigate next" in q
+        or "what next" in q
+    ):
+
+        # Sort findings using the existing priority score.
+        ranked_problems = sorted(
+            problems,
+            key=lambda x: (
+                x["score"],
+                x["affected"]
+            ),
+            reverse=True
+        )
+
+        top_problem = ranked_problems[0]
+
+        second_problem = (
+            ranked_problems[1]
+            if len(ranked_problems) > 1
+            else None
+        )
+
+        suggestions = [
+            f"What evidence supports {top_problem['name']}?",
+            f"Which users are affected by {top_problem['name']}?",
+            f"What should I change in the UI for {top_problem['name']}?",
+            f"Why should we improve {top_problem['name']}?"
+        ]
+
+        if second_problem:
+            suggestions.append(
+                f"Compare {top_problem['name']} and "
+                f"{second_problem['name']}."
+            )
+
+        suggestion_text = "\n".join(
+            f"{i}. {question}"
+            for i, question in enumerate(suggestions, 1)
+        )
+
+        # Keep the top finding as conversation context.
+        st.session_state["last_research_problem"] = (
+            top_problem["name"]
+        )
+
+        return (
+            f"Suggested Research Questions\n\n"
+            f"Based on the current findings, "
+            f"{top_problem['name']} has the highest current "
+            f"priority score ({top_problem['score']}/30).\n\n"
+            f"You could investigate:\n\n"
+            f"{suggestion_text}"
+        )
             # V4.7 — Compare UX Problems
     if "compare" in q:
 
@@ -335,13 +396,12 @@ def answer_research_question(question, data):
                 f"Evidence — {problem_2['name']}\n"
                 f"{evidence_2}"
             )
-
         return (
             "Please mention exactly two UX problems to compare. "
             "For example: Compare Price Transparency and "
             "Delivery Information."
         )
-        
+    
         # V4.6 — Research Summary
     if (
         "research summary" in q

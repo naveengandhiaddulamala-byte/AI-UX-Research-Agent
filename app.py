@@ -22,15 +22,41 @@ User 8: The final amount was higher than I expected.
 User 9: I couldn't easily compare similar products.
 User 10: The estimated delivery time wasn't clearly visible."""
 
-
 def parse_local_reviews(text):
+    import csv
+    import io
+
     reviews = []
+
+    # Try CSV format first
+    reader = csv.DictReader(io.StringIO(text))
+
+    if reader.fieldnames:
+        fieldnames = [name.strip().lower() for name in reader.fieldnames]
+
+        if "user_id" in fieldnames and "feedback" in fieldnames:
+            for row in reader:
+                reviews.append({
+                    "user": row["user_id"].strip(),
+                    "review": row["feedback"].strip()
+                })
+
+            return reviews
+
+    # Fall back to original TXT format
     for line in text.splitlines():
         line = line.strip()
+
         if not line or ":" not in line:
             continue
+
         user, review = line.split(":", 1)
-        reviews.append({"user": user.strip(), "review": review.strip()})
+
+        reviews.append({
+            "user": user.strip(),
+            "review": review.strip()
+        })
+
     return reviews
 
 
@@ -1130,7 +1156,57 @@ with upload_col:
 
             st.success("✅ Local V4.3 analysis complete!")
 
-        st.caption("Gemini mode is temporarily paused because the API free-tier quota is exhausted.")
+        st.divider()
+
+if st.button(
+    "✨ Analyze with V5 AI",
+    use_container_width=True
+):
+    try:
+        with st.spinner("🧠 V5 AI is analyzing your UX research data..."):
+            result = run_ux_research(
+                "Analyze these user reviews and identify the UX problems.",
+                reviews_text=reviews_text
+            )
+
+        st.session_state["analysis_ready"] = True
+        st.session_state["analysis_result"] = result
+
+        st.success("✅ V5 AI analysis complete!")
+
+    except Exception as e:
+        error_message = str(e).lower()
+
+        if (
+            "503" in error_message
+            or "unavailable" in error_message
+            or "high demand" in error_message
+            or "overloaded" in error_message
+        ):
+            st.warning(
+                "🧠 AI analysis is temporarily unavailable because the AI service "
+                "is experiencing high demand. Your uploaded reviews are ready — "
+                "please try again shortly."
+            )
+
+        elif (
+            "429" in error_message
+            or "resource_exhausted" in error_message
+            or "quota" in error_message
+        ):
+            st.warning(
+                "⚠️ The AI usage limit has been reached temporarily. "
+                "Please try again later."
+            )
+
+        else:
+            st.error(
+                "Something went wrong while analyzing the reviews. "
+                "Please try again."
+            )
+
+            # Temporary debugging — terminal only
+            
 
 
 # ---------------------------------------------------------

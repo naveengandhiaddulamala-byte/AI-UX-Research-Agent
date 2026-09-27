@@ -36,25 +36,68 @@ def read_reviews():
 # =========================================================
 
 def parse_reviews():
-    """Separate each review into an individual user record."""
+    """Parse reviews from either CSV or User: Review text format."""
+
+    import csv
+    import io
 
     reviews = []
 
     with open("reviews.txt", "r", encoding="utf-8") as file:
-        for line in file:
-            line = line.strip()
+        text = file.read()
 
-            if not line:
-                continue
+    # -----------------------------------------
+    # Try CSV format first
+    # -----------------------------------------
+    reader = csv.DictReader(io.StringIO(text))
 
-            if ":" not in line:
-                continue
+    if reader.fieldnames:
+        field_map = {
+            name.strip().lower(): name
+            for name in reader.fieldnames
+            if name
+        }
 
-            user, review = line.split(":", 1)
+        if "user_id" in field_map and "feedback" in field_map:
 
+            user_column = field_map["user_id"]
+            feedback_column = field_map["feedback"]
+
+            for row in reader:
+
+                user = (row.get(user_column) or "").strip()
+                review = (row.get(feedback_column) or "").strip()
+
+                if user and review:
+                    reviews.append({
+                        "user": user,
+                        "review": review
+                    })
+
+            return reviews
+
+    # -----------------------------------------
+    # Fall back to original TXT format
+    # -----------------------------------------
+    for line in text.splitlines():
+
+        line = line.strip()
+
+        if not line:
+            continue
+
+        if ":" not in line:
+            continue
+
+        user, review = line.split(":", 1)
+
+        user = user.strip()
+        review = review.strip()
+
+        if user and review:
             reviews.append({
-                "user": user.strip(),
-                "review": review.strip()
+                "user": user,
+                "review": review
             })
 
     return reviews
@@ -198,6 +241,16 @@ def process_ux_analysis(classifications, assessments):
             if item["problem"] == problem
         ]
 
+        secondary_observations = [
+            {
+                "user": item["user"],
+                "observations": item.get("secondary_observations", [])
+            }
+            for item in classifications
+            if item["problem"] == problem
+            and item.get("secondary_observations")
+        ]
+
         results.append({
             "problem": problem,
             "affected_users": affected_users,
@@ -207,7 +260,8 @@ def process_ux_analysis(classifications, assessments):
             "business_impact": business_impact,
             "priority_score": priority_result["score"],
             "priority": priority_result["priority"],
-            "users": users
+            "users": users,
+            "secondary_observations": secondary_observations
         })
 
     results.sort(
@@ -218,6 +272,33 @@ def process_ux_analysis(classifications, assessments):
     return {
         "total_users": total_users,
         "problems": results
+    }
+
+def validate_v5_classifications(classifications):
+    """Validate the one-primary-problem-per-user rule."""
+
+    users = [
+        item["user"]
+        for item in classifications
+    ]
+
+    unique_users = set(users)
+
+    duplicate_users = [
+        user
+        for user in unique_users
+        if users.count(user) > 1
+    ]
+
+    return {
+        "total_classifications": len(classifications),
+        "unique_users": len(unique_users),
+        "duplicate_users": duplicate_users,
+        "is_valid": (
+            len(classifications) == 30
+            and len(unique_users) == 30
+            and len(duplicate_users) == 0
+        )
     }
 
 
@@ -240,11 +321,13 @@ analysis_tool = types.Tool(
                 properties={
                     "classifications": types.Schema(
                         type="ARRAY",
-                        description=(
-                            "Every user-to-UX-problem classification. "
-                            "A user may appear more than once only when the "
-                            "review clearly contains multiple UX problems."
-                        ),
+                       description=(
+    "One primary UX problem classification for every user. "
+    "Each user must appear exactly once. If a review contains "
+    "multiple issues, choose the primary problem using both "
+    "task impact and strength of complaint. Closely related "
+    "problems across users should share one broader UX theme."
+),
                         items=types.Schema(
                             type="OBJECT",
                             properties={
@@ -255,6 +338,18 @@ analysis_tool = types.Tool(
                                 "problem": types.Schema(
                                     type="STRING",
                                     description="UX problem identified."
+                                ),
+                                "secondary_observations": types.Schema(
+                                    type="ARRAY",
+                                    description=(
+                                        "Other genuine UX issues mentioned in the user's review "
+                                        "that were not selected as the primary problem. "
+                                        "These are preserved as supporting observations and "
+                                        "must not be counted as primary UX problems."
+                                    ),
+                                    items=types.Schema(
+                                        type="STRING"
+                                    )
                                 )
                             },
                             required=["user", "problem"]
@@ -312,6 +407,7 @@ def run_ux_research(user_question, reviews_text=None):
             file.write(reviews_text)
 
     reviews = parse_reviews()
+    
 
     if not reviews:
         raise ValueError("No valid reviews were found to analyze.")
@@ -341,16 +437,84 @@ Your first job is to understand the meaning of every review.
 Identify ALL genuine UX problems described by the reviews.
 Do not invent problems that are not supported by the reviews.
 
-A single user may have multiple UX problems only when their review
-clearly describes multiple distinct issues.
+For each user, identify ONE primary UX problem.
+
+If a review describes multiple issues, consider:
+1. Which issue has the greatest impact on the user's ability to complete their task.
+2. Which issue the user expresses most strongly.
+
+Use a combination of task impact and strength of complaint to select
+the primary UX problem.
+
+Do not count the same user under multiple primary UX problems.
+
+Closely related primary problems across different users should be
+grouped under one clear broader UX theme.
+
+Do not use a predefined list of UX problem names.
+Create themes dynamically from the evidence in the uploaded reviews.
+
+Even if only one user reports a unique genuine UX problem,
+keep that problem visible instead of hiding or merging it into
+an unrelated theme.
 
 Then assess EVERY major UX problem using:
 
 1. Severity: 1-10
    - Base this only on evidence from the reviews.
+   - Measure how strongly the problem affects the user's ability
+     to complete their task.
 
-2. Business impact: 1-10
+   Scoring guide:
+   1-3 = Minor friction.
+         The user can still complete the task with little difficulty.
+
+   4-6 = Moderate friction.
+         The problem causes confusion, delay, or extra effort,
+         but the task can still be completed.
+
+   7-8 = Major friction.
+         The problem seriously disrupts the task or creates
+         a significant negative experience.
+
+   9-10 = Critical failure.
+          The user cannot complete the task, loses money,
+          receives an incorrect outcome, or experiences another
+          severe failure supported by the review evidence.
+
+          2. Business Impact: 1-10
    - Base this only on evidence from the reviews and the user's journey.
+   - Measure the potential impact of the UX problem on important
+     business outcomes.
+
+   Consider evidence related to:
+   - purchase or order completion
+   - cancellations
+   - refunds
+   - payment failures
+   - repeat usage
+   - customer trust
+   - support burden
+
+   Scoring guide:
+   1-3 = Low business impact.
+         Mostly minor inconvenience with little evidence of impact
+         on important business outcomes.
+
+   4-6 = Moderate business impact.
+         May create additional support needs, reduce satisfaction,
+         or introduce friction that could affect continued usage.
+
+   7-8 = High business impact.
+         Directly affects important outcomes such as completed orders,
+         cancellations, refunds, payments, or customer trust.
+
+   9-10 = Critical business impact.
+          Strong evidence of lost transactions, failed payments,
+          significant financial consequences, or serious damage
+          to customer trust.
+
+   Do not assume business impact that is not supported by the reviews.
 
 IMPORTANT:
 - Do not calculate affected-user counts yourself.
@@ -379,13 +543,25 @@ The tool will calculate:
 
     print("🧠 Gemini is understanding the user reviews...")
 
-    response = client.models.generate_content(
-        model="gemini-3.5-flash",
-        contents=contents,
-        config=types.GenerateContentConfig(
-            tools=[analysis_tool]
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=contents,
+            config=types.GenerateContentConfig(
+                tools=[analysis_tool]
+            )
         )
-    )
+    except Exception as e:
+        if "503" in str(e) or "UNAVAILABLE" in str(e):
+            response = client.models.generate_content(
+                model="gemini-3.1-flash-lite",
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    tools=[analysis_tool]
+                )
+            )
+        else:
+            raise
 
     # =====================================================
     # STEP 2: PYTHON CALCULATES
@@ -438,11 +614,10 @@ The tool will calculate:
 
     contents.append(
         types.Content(
-            role="tool",
+            role="user",
             parts=tool_parts
         )
     )
-
     # =====================================================
     # STEP 3: GEMINI EXPLAINS THE RESULTS
     # =====================================================
@@ -464,6 +639,7 @@ For every problem provide:
 - percentage
 - users affected
 - evidence from reviews
+- secondary observations mentioned by affected users, when available
 - frequency score
 - severity
 - business impact
@@ -494,6 +670,10 @@ Users:
 
 Evidence:
 - User [number]: "[short quote]"
+
+Secondary Observations:
+- User [number]: [secondary issue]
+- If none exist, write "None"
 
 Frequency Score: [0-10]
 Severity: [1-10]
@@ -529,7 +709,7 @@ Why it matters: [short explanation]
     print("💡 Gemini is explaining the calculated results...")
 
     final_response = client.models.generate_content(
-        model="gemini-3.5-flash",
+        model="gemini-3.8-flash",
         contents=contents
     )
 

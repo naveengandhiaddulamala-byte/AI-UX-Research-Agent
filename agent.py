@@ -220,11 +220,13 @@ def process_ux_analysis(classifications, assessments):
         )
 
         # Convert percentage to the 0-10 frequency score.
-        frequency_score = min(
-            10,
-            int(round(percentage / 10))
-        )
-
+        frequency_score = max(
+    1,
+    min(
+        10,
+        int(round(percentage / 10))
+    )
+)
         assessment = assessment_map.get(problem, {})
 
         severity = max(

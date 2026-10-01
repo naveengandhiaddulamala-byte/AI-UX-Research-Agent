@@ -1,6 +1,10 @@
-import streamlit as st
-import pandas as pd
-from agent import run_ux_research
+import streamlit as st  # type: ignore[import-not-found]
+import hashlib
+from agent import (
+    run_ux_research,
+    match_ux_themes,
+    build_ux_trend_comparison
+)
 
 
 # =========================================================
@@ -1140,21 +1144,21 @@ with upload_col:
             f"✓ {uploaded_file.name} is ready for analysis"
         )
 
-        if st.button(
+    if st.button(
             "🧪 Analyze Locally (No API)",
             use_container_width=True,
             type="primary"
         ):
 
-            with st.spinner("🧮 Python is analyzing your reviews..."):
-                data = run_local_demo(reviews_text)
-                result = build_local_report(data)
+        with st.spinner("🧮 Python is analyzing your reviews..."):
+            data = run_local_demo(reviews_text)
+            result = build_local_report(data)
 
-            st.session_state["analysis_ready"] = True
-            st.session_state["analysis_result"] = result
-            st.session_state["analysis_data"] = data
+        st.session_state["analysis_ready"] = True
+        st.session_state["analysis_result"] = result
+        st.session_state["analysis_data"] = data
 
-            st.success("✅ Local V4.3 analysis complete!")
+        st.success("✅ Local V4.3 analysis complete!")
 
         st.divider()
 
@@ -1441,15 +1445,13 @@ with left:
         )
 
         if analysis and analysis["problems"]:
-            frequency_df = pd.DataFrame(
-                {
-                    "UX Problem": [p["name"] for p in analysis["problems"]],
-                    "Affected Users": [p["affected"] for p in analysis["problems"]],
-                }
-            ).set_index("UX Problem")
+            frequency_data = {
+                p["name"]: p["affected"]
+                for p in analysis["problems"]
+            }
 
             st.bar_chart(
-                frequency_df,
+                frequency_data,
                 use_container_width=True
             )
         else:
@@ -1473,20 +1475,15 @@ with left:
         )
 
         if analysis:
-            priority_df = pd.DataFrame(
-                {
-                    "Priority": ["CRITICAL", "HIGH", "MEDIUM", "LOW"],
-                    "Issues": [
-                        analysis["critical"],
-                        analysis["high"],
-                        analysis["medium"],
-                        analysis["low"],
-                    ],
-                }
-            ).set_index("Priority")
+            priority_data = {
+                "CRITICAL": analysis["critical"],
+                "HIGH": analysis["high"],
+                "MEDIUM": analysis["medium"],
+                "LOW": analysis["low"],
+            }
 
             st.bar_chart(
-                priority_df,
+                priority_data,
                 use_container_width=True
             )
         else:
@@ -1716,3 +1713,304 @@ st.html("""
 
 </div>
 """)
+
+# ==========================================
+# UX TREND ANALYSIS
+# ==========================================
+
+st.divider()
+
+# ==========================================
+# TREND ANALYSIS SESSION STATE
+# ==========================================
+
+if "previous_trend_analysis" not in st.session_state:
+    st.session_state.previous_trend_analysis = None
+
+if "trend_theme_matches" not in st.session_state:
+    st.session_state.trend_theme_matches = None
+
+if "trend_match_signature" not in st.session_state:
+    st.session_state.trend_match_signature = None
+
+if "current_trend_analysis" not in st.session_state:
+    st.session_state.current_trend_analysis = None
+
+if "previous_trend_file_signature" not in st.session_state:
+    st.session_state.previous_trend_file_signature = None
+
+if "current_trend_file_signature" not in st.session_state:
+    st.session_state.current_trend_file_signature = None
+
+st.header("📈 UX Trend Analysis")
+
+st.write(
+    "Compare previous user feedback with current feedback "
+    "to understand how UX problems are changing over time."
+)
+
+trend_col1, trend_col2 = st.columns(2)
+
+with trend_col1:
+    previous_file = st.file_uploader(
+        "📂 Previous Dataset",
+        type=["csv", "txt"],
+        key="previous_trend_dataset"
+    )
+
+with trend_col2:
+    current_file = st.file_uploader(
+        "📂 Current Dataset",
+        type=["csv", "txt"],
+        key="current_trend_dataset"
+    )
+
+if previous_file is not None and current_file is not None:
+    previous_text = previous_file.getvalue().decode("utf-8")
+    current_text = current_file.getvalue().decode("utf-8")
+    previous_signature = hashlib.sha256(
+        previous_file.getvalue()
+    ).hexdigest()
+
+    current_signature = hashlib.sha256(
+        current_file.getvalue()
+    ).hexdigest()
+
+    st.write(
+        "Previous dataset loaded:",
+        previous_file.name
+    )
+    if st.button(
+        "📊 Compare UX Trends",
+        use_container_width=True
+    ):
+        try:
+            if (
+                st.session_state.previous_trend_analysis is None
+                or st.session_state.previous_trend_file_signature != previous_signature
+            ):
+                st.session_state.previous_trend_analysis = run_ux_research(
+                    "Analyze these user reviews and identify the UX problems.",
+                    reviews_text=previous_text,
+                    return_analysis=True
+                )
+
+            st.session_state.previous_trend_file_signature = previous_signature
+
+            if (
+                st.session_state.current_trend_analysis is None
+                or st.session_state.current_trend_file_signature != current_signature
+            ):
+                with st.spinner("Analyzing current UX dataset..."):
+                    st.session_state.current_trend_analysis = run_ux_research(
+                        "Analyze these user reviews and identify the UX problems.",
+                        reviews_text=current_text,
+                        return_analysis=True
+                    )
+
+            st.session_state.current_trend_file_signature = current_signature
+
+            previous_analysis = st.session_state.previous_trend_analysis
+            current_analysis = st.session_state.current_trend_analysis
+
+            st.success("✅ Previous dataset analysis complete!")
+
+            st.write(
+                "Previous dataset users:",
+                previous_analysis["total_users"]
+            )
+
+            st.write(
+                "UX themes found:",
+                len(previous_analysis["problems"])
+            )
+
+            st.write(
+                "Current dataset loaded:",
+                current_file.name
+            )
+
+            st.success("✅ Current dataset analysis complete!")
+
+            st.write(
+                "Current dataset users:",
+                current_analysis["total_users"]
+            )
+
+            st.write(
+                "Current UX themes found:",
+                len(current_analysis["problems"])
+            )
+
+            previous_themes = [
+                item["problem"]
+                for item in previous_analysis["problems"]
+            ]
+
+            current_themes = [
+                item["problem"]
+                for item in current_analysis["problems"]
+            ]
+
+            trend_match_signature = (
+                previous_signature + current_signature
+            )
+
+            if (
+                st.session_state.trend_theme_matches is None
+                or st.session_state.trend_match_signature != trend_match_signature
+            ):
+                with st.spinner("Matching UX themes across datasets..."):
+                    st.session_state.trend_theme_matches = match_ux_themes(
+                        previous_themes,
+                        current_themes
+                    )
+
+                st.session_state.trend_match_signature = trend_match_signature
+
+            theme_matches = st.session_state.trend_theme_matches
+
+            st.success("✅ UX themes matched!")
+
+           # st.write("Theme matching result:")
+            #st.json(theme_matches)
+
+            trend_results = build_ux_trend_comparison(
+                previous_analysis,
+                current_analysis,
+                theme_matches
+            )
+
+            st.subheader("📊 Trend Overview")
+
+            increasing_count = sum(
+                1 for item in trend_results
+                if item["trend"] == "INCREASING"
+            )
+
+            decreasing_count = sum(
+                1 for item in trend_results
+                if item["trend"] == "DECREASING"
+            )
+
+            new_count = sum(
+                1 for item in trend_results
+                if item["trend"] == "NEWLY OBSERVED"
+            )
+
+            not_observed_count = sum(
+                1 for item in trend_results
+                if item["trend"] == "NOT OBSERVED IN CURRENT DATASET"
+            )
+
+            col1, col2, col3, col4 = st.columns(4)
+
+            col1.metric("📈 Increasing", increasing_count)
+            col2.metric("📉 Decreasing", decreasing_count)
+            col3.metric("🆕 Newly Observed", new_count)
+            col4.metric("◯ Not Observed", not_observed_count)
+
+            st.divider()
+            st.subheader("UX Trend Details")
+            st.caption(
+                "Compare how frequently each UX issue appears across the two research datasets."
+            )
+
+            for item in trend_results:
+                problem = item["problem"]
+                previous_users = item["previous_users"]
+                previous_percentage = item["previous_percentage"]
+                current_users = item["current_users"]
+                current_percentage = item["current_percentage"]
+                change = item["change"]
+                trend = item["trend"]
+                match_reason = item["match_reason"]
+
+                with st.container(border=True):
+                    st.markdown(f"### {problem}")
+
+                    if trend == "INCREASING":
+                        st.info(
+                            "This UX issue appeared more frequently in the current dataset."
+                        )
+                    elif trend == "DECREASING":
+                        st.success(
+                            "This UX issue appeared less frequently in the current dataset."
+                        )
+                    elif trend == "NEWLY OBSERVED":
+                        st.warning(
+                            "This UX issue was observed in the current dataset but not in the previous dataset."
+                        )
+                    else:
+                        st.info(
+                            "This UX issue was not observed in the current dataset."
+                        )
+
+                    col1, col2, col3 = st.columns(3)
+
+                    col1.metric(
+                        "Previous Dataset",
+                        f"{previous_percentage}%",
+                        f"{previous_users} users"
+                    )
+
+                    col2.metric(
+                        "Current Dataset",
+                        f"{current_percentage}%",
+                        f"{current_users} users"
+                    )
+
+                    if change > 0:
+                        change_text = f"+{change} pp"
+                    elif change < 0:
+                        change_text = f"{change} pp"
+                    else:
+                        change_text = "0 pp"
+
+                    col3.metric(
+                        "Change",
+                        change_text,
+                        help="Difference in percentage points between the previous and current datasets."
+                    )
+
+                    if trend == "INCREASING":
+                        status_text = "📈 INCREASING"
+                    elif trend == "DECREASING":
+                        status_text = "📉 DECREASING"
+                    elif trend == "NEWLY OBSERVED":
+                        status_text = "🆕 NEWLY OBSERVED"
+                    else:
+                        status_text = "◯ NOT OBSERVED IN CURRENT DATASET"
+
+                    st.markdown(f"**Status:** {status_text}")
+
+                    st.caption(
+                        f"Theme match: {match_reason}"
+                    )
+
+           # st.json(trend_results)
+        except Exception as e:
+            error_message = str(e)
+
+            if (
+                "503" in error_message
+                or "UNAVAILABLE" in error_message
+                or "429" in error_message
+                or "RESOURCE_EXHAUSTED" in error_message
+            ):
+                st.warning(
+                    "⚠️ AI service is temporarily busy. "
+                    "Your uploaded files are safe. Please try again shortly."
+                )
+
+            elif "429" in error_message or "RESOURCE_EXHAUSTED" in error_message:
+                st.warning(
+                    "⚠️ AI usage limit has been reached temporarily. "
+                    "Please try again later."
+                )
+
+            else:
+                st.error(
+                    "Something went wrong while comparing the UX datasets. "
+                    "Please try again."
+                )

@@ -43,7 +43,7 @@ def read_reviews():
 # TOOL 2: PARSE REVIEWS
 # =========================================================
 
-def parse_reviews():
+def parse_reviews(reviews_text=None):
     """Parse reviews from either CSV or User: Review text format."""
 
     import csv
@@ -51,8 +51,11 @@ def parse_reviews():
 
     reviews = []
 
-    with open("reviews.txt", "r", encoding="utf-8") as file:
-        text = file.read()
+    if reviews_text is not None:
+        text = reviews_text
+    else:
+        with open("reviews.txt", "r", encoding="utf-8") as file:
+            text = file.read()
 
     # -----------------------------------------
     # Try CSV format first
@@ -190,7 +193,7 @@ def calculate_priority_score(frequency_score, severity, business_impact):
 # =========================================================
 
 
-def process_ux_analysis(classifications, assessments):
+def process_ux_analysis(classifications, assessments, total_users=None):
     """
     Perform deterministic UX calculations in Python.
 
@@ -200,8 +203,9 @@ def process_ux_analysis(classifications, assessments):
     and priority calculations.
     """
 
-    reviews = parse_reviews()
-    total_users = len(reviews)
+    if total_users is None:
+        reviews = parse_reviews()
+        total_users = len(reviews)
 
     problem_counts = count_ux_problems(classifications)
 
@@ -284,6 +288,108 @@ def process_ux_analysis(classifications, assessments):
         "problems": results
     }
 
+# ==========================================
+# UX TREND ANALYSIS
+# ==========================================
+
+def match_ux_themes(previous_themes, current_themes):
+    """
+    Use AI to identify semantically related UX themes
+    between previous and current research datasets.
+    Return structured data for Python trend analysis.
+    """
+
+    import json
+
+    prompt = f"""
+You are comparing UX research findings from two different datasets.
+
+PREVIOUS DATASET UX THEMES:
+{previous_themes}
+
+CURRENT DATASET UX THEMES:
+{current_themes}
+
+Determine which themes represent the same underlying UX problem,
+even when their names are different.
+
+Rules:
+
+1. Match themes based on the underlying UX problem,
+   not just similar wording.
+
+2. Do not match themes simply because they belong
+   to the same product area.
+
+3. Every current theme can match at most one previous theme.
+
+4. Every previous theme can match at most one current theme.
+
+5. If a current theme has no meaningful previous equivalent,
+   classify it as newly observed.
+
+6. If a previous theme has no meaningful current equivalent,
+   classify it as not observed in the current dataset.
+
+7. Do not invent a match when the relationship is weak.
+
+For matched themes, create a short common UX theme name
+and briefly explain why they represent the same problem.
+
+Return ONLY valid JSON.
+
+Use exactly this structure:
+
+{{
+    "matches": [
+        {{
+            "previous_theme": "Previous theme name",
+            "current_theme": "Current theme name",
+            "common_theme": "Common UX theme name",
+            "reason": "Short explanation of why they match"
+        }}
+    ],
+    "newly_observed": [
+        "Current theme with no previous match"
+    ],
+    "not_observed_current": [
+        "Previous theme with no current match"
+    ]
+}}
+
+Do not include markdown.
+Do not include ```json.
+Do not include any text before or after the JSON.
+"""
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=prompt
+        )
+    except Exception as e:
+        if (
+            "503" in str(e)
+            or "UNAVAILABLE" in str(e)
+            or "429" in str(e)
+            or "RESOURCE_EXHAUSTED" in str(e)
+        ):
+            print("Primary Gemini model unavailable or quota limited. Trying fallback model...")
+            response = client.models.generate_content(
+                model="gemini-3.1-flash-lite",
+                contents=prompt
+            )
+        else:
+            raise
+
+    response_text = response.text.strip()
+    if response_text.startswith("```"):
+        response_text = response_text.strip("`")
+        if response_text.startswith("json"):
+            response_text = response_text[4:].lstrip()
+
+    return json.loads(response_text)
+
 def validate_v5_classifications(classifications):
     """Validate the one-primary-problem-per-user rule."""
 
@@ -310,6 +416,117 @@ def validate_v5_classifications(classifications):
             and len(duplicate_users) == 0
         )
     }
+
+def build_ux_trend_comparison(
+    previous_analysis,
+    current_analysis,
+    theme_matches
+):
+    """
+    Connect AI theme matching with deterministic Python
+    percentage comparison.
+    """
+
+    previous_map = {
+        item["problem"]: item
+        for item in previous_analysis["problems"]
+    }
+
+    current_map = {
+        item["problem"]: item
+        for item in current_analysis["problems"]
+    }
+
+    comparison_items = []
+
+    # Themes found in both datasets
+    for match in theme_matches["matches"]:
+        previous_theme = match["previous_theme"]
+        current_theme = match["current_theme"]
+
+        previous_item = previous_map.get(previous_theme)
+        current_item = current_map.get(current_theme)
+
+        if not previous_item or not current_item:
+            continue
+
+        comparison_items.append({
+            "problem": match["common_theme"],
+            "previous_percentage": previous_item["percentage"],
+            "current_percentage": current_item["percentage"],
+            "previous_users": previous_item["affected_users"],
+            "current_users": current_item["affected_users"],
+            "match_reason": match["reason"]
+        })
+
+    # Themes appearing only in current research
+    for theme in theme_matches["newly_observed"]:
+        current_item = current_map.get(theme)
+
+        if not current_item:
+            continue
+
+        comparison_items.append({
+            "problem": theme,
+            "previous_percentage": 0,
+            "current_percentage": current_item["percentage"],
+            "previous_users": 0,
+            "current_users": current_item["affected_users"],
+            "match_reason": "No equivalent theme was found in the previous dataset."
+        })
+
+    # Themes appearing only in previous research
+    for theme in theme_matches["not_observed_current"]:
+        previous_item = previous_map.get(theme)
+
+        if not previous_item:
+            continue
+
+        comparison_items.append({
+            "problem": theme,
+            "previous_percentage": previous_item["percentage"],
+            "current_percentage": 0,
+            "previous_users": previous_item["affected_users"],
+            "current_users": 0,
+            "match_reason": "No equivalent theme was found in the current dataset."
+        })
+
+    trends = []
+    for item in comparison_items:
+        previous_percentage = item["previous_percentage"]
+        current_percentage = item["current_percentage"]
+        change = round(current_percentage - previous_percentage, 2)
+
+        if previous_percentage == 0 and current_percentage > 0:
+            trend = "NEWLY OBSERVED"
+
+        elif previous_percentage > 0 and current_percentage == 0:
+            trend = "NOT OBSERVED IN CURRENT DATASET"
+
+        elif change > 0:
+            trend = "INCREASING"
+
+        elif change < 0:
+            trend = "DECREASING"
+
+        else:
+            trend = "STABLE"
+
+        trends.append({
+            "problem": item["problem"],
+            "previous_percentage": previous_percentage,
+            "current_percentage": current_percentage,
+            "change": change,
+            "trend": trend
+        })
+
+    # Preserve counts and AI match explanations
+    for trend, source in zip(trends, comparison_items):
+        trend["previous_users"] = source["previous_users"]
+        trend["current_users"] = source["current_users"]
+        trend["match_reason"] = source["match_reason"]
+
+    return trends
 
 
 # =========================================================
@@ -407,16 +624,19 @@ analysis_tool = types.Tool(
 # =========================================================
 
 
-def run_ux_research(user_question, reviews_text=None):
+def run_ux_research(
+    user_question,
+    reviews_text=None,
+    return_analysis=False
+):
     """Run the optimized V4 UX research workflow."""
 
-    # If Streamlit supplied uploaded/sample reviews,
-    # save them so the existing Python tools can process them.
-    if reviews_text:
-        with open("reviews.txt", "w", encoding="utf-8") as file:
-            file.write(reviews_text)
-
-    reviews = parse_reviews()
+    # Use uploaded/sample reviews directly when supplied.
+    # Otherwise fall back to the existing reviews.txt file.
+    if reviews_text is not None:
+        reviews = parse_reviews(reviews_text)
+    else:
+        reviews = parse_reviews()
     
 
     if not reviews:
@@ -561,8 +781,14 @@ The tool will calculate:
                 tools=[analysis_tool]
             )
         )
+
     except Exception as e:
-        if "503" in str(e) or "UNAVAILABLE" in str(e):
+        if (
+            "503" in str(e)
+            or "UNAVAILABLE" in str(e)
+            or "429" in str(e)
+            or "RESOURCE_EXHAUSTED" in str(e)
+        ):
             response = client.models.generate_content(
                 model="gemini-3.1-flash-lite",
                 contents=contents,
@@ -599,7 +825,8 @@ The tool will calculate:
 
         analysis = process_ux_analysis(
             classifications,
-            assessments
+            assessments,
+            total_users=len(reviews)
         )
 
         for item in analysis["problems"]:
@@ -628,6 +855,8 @@ The tool will calculate:
             parts=tool_parts
         )
     )
+    if return_analysis:
+        return analysis
     # =====================================================
     # STEP 3: GEMINI EXPLAINS THE RESULTS
     # =====================================================
@@ -728,6 +957,9 @@ Why it matters: [short explanation]
     save_report(final_report)
 
     print("💾 Report saved successfully.")
+
+    if return_analysis:
+        return analysis
 
     return final_report
 

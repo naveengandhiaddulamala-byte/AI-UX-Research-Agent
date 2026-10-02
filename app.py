@@ -3,7 +3,8 @@ import hashlib
 from agent import (
     run_ux_research,
     match_ux_themes,
-    build_ux_trend_comparison
+    build_ux_trend_comparison,
+    suggest_project_workspace
 )
 
 
@@ -759,6 +760,28 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ==========================================
+# RESEARCH PROJECTS SESSION STATE
+# ==========================================
+
+if "creating_project" not in st.session_state:
+    st.session_state.creating_project = False
+
+if "project_setup_step" not in st.session_state:
+    st.session_state.project_setup_step = 1
+
+if "new_project_data" not in st.session_state:
+    st.session_state.new_project_data = {
+        "name": "",
+        "type": "",
+        "research_goal": "",
+        "description": "",
+        "workspace_sections": []
+    }
+
+if "workspace_ai_suggestion" not in st.session_state:
+    st.session_state.workspace_ai_suggestion = None
+
 
 # ---------------------------------------------------------
 # CUSTOM CSS
@@ -1104,6 +1127,531 @@ st.html("""
     </div>
 </div>
 """)
+
+# ---------------------------------------------------------
+# RESEARCH PROJECTS
+# ---------------------------------------------------------
+
+project_col, spacer_col = st.columns([1, 3])
+
+with project_col:
+    if st.button(
+        "＋ New Research Project",
+        type="primary",
+        key="new_research_project"
+    ):
+        st.session_state.creating_project = True
+        st.session_state.project_setup_step = 1
+
+        st.session_state.new_project_data = {
+            "name": "",
+            "type": "",
+            "research_goal": "",
+            "description": "",
+            "workspace_sections": []
+        }
+
+        st.session_state.workspace_ai_suggestion = None
+
+        if "project_workspace_sections" in st.session_state:
+            del st.session_state["project_workspace_sections"]
+
+        st.rerun()
+
+if (
+    st.session_state.creating_project
+    and st.session_state.project_setup_step == 1
+):
+    # ---------------------------------------------------------
+    # PROJECT CREATION - STEP 1
+    # ---------------------------------------------------------
+    st.divider()
+
+    st.subheader("Create New Research Project")
+    st.caption("Step 1 of 4 — Project Details")
+
+    project_name = st.text_input(
+        "Project Name *",
+        value=st.session_state.new_project_data["name"],
+        placeholder="Example: Freshcart Checkout Redesign"
+    )
+
+    project_type = st.selectbox(
+        "Project Type *",
+        [
+            "Select project type",
+            "Mobile App",
+            "Website",
+            "SaaS Product",
+            "E-commerce",
+            "Service",
+            "Other"
+        ]
+    )
+
+    research_goal = st.text_area(
+        "Research Goal *",
+        value=st.session_state.new_project_data["research_goal"],
+        placeholder="Example: Understand why users abandon checkout"
+    )
+
+    description = st.text_area(
+        "Description",
+        value=st.session_state.new_project_data["description"],
+        placeholder="Describe what you want to research..."
+    )
+
+    if st.button("Continue →", type="primary"):
+        if not project_name.strip():
+            st.warning("Please enter a project name.")
+
+        elif project_type == "Select project type":
+            st.warning("Please select a project type.")
+
+        elif not research_goal.strip():
+            st.warning("Please enter a research goal.")
+
+        else:
+            st.session_state.new_project_data["name"] = project_name
+            st.session_state.new_project_data["type"] = project_type
+            st.session_state.new_project_data["research_goal"] = research_goal
+            st.session_state.new_project_data["description"] = description
+
+            st.session_state.project_setup_step = 2
+            st.rerun()
+
+# ---------------------------------------------------------
+# PROJECT CREATION - STEP 2
+# ---------------------------------------------------------
+
+if (
+    st.session_state.creating_project
+    and st.session_state.project_setup_step == 2
+):
+    st.divider()
+
+    st.subheader("Customize Research Workspace")
+    st.caption("Step 2 of 4 — Research Workspace")
+
+    st.write(
+        "Choose what you want to track in this project. "
+        "You can customize these sections later."
+    )
+
+    default_sections = [
+        "Overview",
+        "Research Data",
+        "UX Findings",
+        "Evidence",
+        "Recommendations",
+        "Trend Analysis",
+    ]
+
+    # Initialize workspace sections only once
+    if not st.session_state.new_project_data.get("workspace_sections"):
+        st.session_state.new_project_data["workspace_sections"] = list(
+            default_sections
+        )
+
+    saved_sections = st.session_state.new_project_data["workspace_sections"]
+
+    # Make sure custom / AI-renamed sections remain available
+    workspace_options = list(dict.fromkeys(default_sections + saved_sections))
+
+    # Rebuild widget state from our saved project state when needed
+    if "project_workspace_sections" not in st.session_state:
+        st.session_state.project_workspace_sections = list(saved_sections)
+
+    selected_sections = st.multiselect(
+        "Workspace Sections",
+        workspace_options,
+        key="project_workspace_sections",
+    )
+
+    # Save the current researcher selection
+    st.session_state.new_project_data["workspace_sections"] = list(
+        selected_sections
+    )
+
+        # -----------------------------------------
+    # REORDER WORKSPACE SECTIONS
+    # -----------------------------------------
+
+    st.markdown("#### Reorder Sections")
+    st.caption("Move sections up or down to organize your workspace.")
+
+    for index, section in enumerate(selected_sections):
+        name_col, up_col, down_col = st.columns([5, 1, 1])
+
+        with name_col:
+            st.write(section)
+
+        with up_col:
+            if st.button(
+                "↑",
+                key=f"move_section_up_{index}",
+                disabled=(index == 0)
+            ):
+                updated_sections = list(selected_sections)
+
+                updated_sections[index - 1], updated_sections[index] = (
+                    updated_sections[index],
+                    updated_sections[index - 1]
+                )
+
+                st.session_state.new_project_data[
+                    "workspace_sections"
+                ] = updated_sections
+
+                if "project_workspace_sections" in st.session_state:
+                    del st.session_state["project_workspace_sections"]
+
+                st.session_state.workspace_ai_suggestion = None
+                st.rerun()
+
+        with down_col:
+            if st.button(
+                "↓",
+                key=f"move_section_down_{index}",
+                disabled=(index == len(selected_sections) - 1)
+            ):
+                updated_sections = list(selected_sections)
+
+                updated_sections[index], updated_sections[index + 1] = (
+                    updated_sections[index + 1],
+                    updated_sections[index]
+                )
+
+                st.session_state.new_project_data[
+                    "workspace_sections"
+                ] = updated_sections
+
+                if "project_workspace_sections" in st.session_state:
+                    del st.session_state["project_workspace_sections"]
+
+                st.session_state.workspace_ai_suggestion = None
+                st.rerun()
+
+       # -----------------------------------------
+    # MANUAL RENAME SECTION
+    # -----------------------------------------
+
+    st.markdown("#### Rename a Section")
+
+    rename_section = st.selectbox(
+        "Choose section to rename",
+        selected_sections,
+        key="manual_rename_section",
+    )
+
+    new_section_name = st.text_input(
+        "New section name",
+        placeholder="Example: Customer Feedback",
+        key="manual_rename_name",
+    )
+
+    if st.button(
+        "Rename Section",
+        key="manual_rename_button"
+    ):
+        clean_name = new_section_name.strip()
+
+        if not clean_name:
+            st.warning("Enter a new section name.")
+
+        elif clean_name == rename_section:
+            st.warning("Enter a different section name.")
+
+        elif clean_name in selected_sections:
+            st.warning("A section with this name already exists.")
+
+        else:
+            updated_sections = [
+                clean_name if section == rename_section else section
+                for section in selected_sections
+            ]
+
+            st.session_state.new_project_data[
+                "workspace_sections"
+            ] = updated_sections
+
+            if "project_workspace_sections" in st.session_state:
+                del st.session_state["project_workspace_sections"]
+
+            st.session_state.workspace_ai_suggestion = None
+            # Clear the rename form after successful rename
+            if "manual_rename_section" in st.session_state:
+                del st.session_state["manual_rename_section"]
+
+            if "manual_rename_name" in st.session_state:
+                del st.session_state["manual_rename_name"]
+
+            st.rerun()
+
+                # -----------------------------------------
+    # MANUAL REMOVE SECTION
+    # -----------------------------------------
+
+    st.markdown("#### Remove a Section")
+
+    remove_section = st.selectbox(
+        "Choose section to remove",
+        selected_sections,
+        key="manual_remove_section"
+    )
+
+    if st.button(
+        "Remove Section",
+        key="manual_remove_button"
+    ):
+        if len(selected_sections) <= 1:
+            st.warning(
+                "Your workspace must contain at least one section."
+            )
+
+        else:
+            updated_sections = [
+                section
+                for section in selected_sections
+                if section != remove_section
+            ]
+
+            st.session_state.new_project_data[
+                "workspace_sections"
+            ] = updated_sections
+
+            if "project_workspace_sections" in st.session_state:
+                del st.session_state["project_workspace_sections"]
+
+            # Clear old AI suggestions because workspace changed
+            st.session_state.workspace_ai_suggestion = None
+
+            # Reset remove selector
+            if "manual_remove_section" in st.session_state:
+                del st.session_state["manual_remove_section"]
+
+            st.rerun()
+
+
+    # -----------------------------------------
+    # ADD CUSTOM SECTION
+    # -----------------------------------------
+
+    st.markdown("#### Add Your Own Section")
+
+    custom_section = st.text_input(
+        "Section name",
+        placeholder="Example: User Interviews",
+        key="custom_workspace_section",
+    )
+
+    if st.button("＋ Add Section", key="add_custom_workspace_section"):
+        new_section = custom_section.strip()
+
+        if not new_section:
+            st.warning("Enter a section name first.")
+
+        elif new_section in selected_sections:
+            st.warning("This section already exists.")
+
+        else:
+            updated_sections = selected_sections + [new_section]
+
+            st.session_state.new_project_data[
+                "workspace_sections"
+            ] = updated_sections
+
+            # Remove the old widget state before rerunning.
+            if "project_workspace_sections" in st.session_state:
+                del st.session_state["project_workspace_sections"]
+
+            st.rerun()
+
+    if st.button(
+        "✨ Suggest Workspace with AI",
+        key="suggest_workspace_ai"
+    ):
+        st.session_state.new_project_data[
+            "workspace_sections"
+        ] = list(selected_sections)
+
+        with st.spinner(
+            "AI is reviewing your research workspace..."
+        ):
+            project = st.session_state.new_project_data
+
+            workspace_suggestion = suggest_project_workspace(
+                project_name=project["name"],
+                project_type=project["type"],
+                research_goal=project["research_goal"],
+                description=project["description"],
+                current_sections=selected_sections,
+            )
+
+            st.session_state.workspace_ai_suggestion = (
+                workspace_suggestion
+            )
+
+# -----------------------------------------
+# DISPLAY AI WORKSPACE SUGGESTIONS
+# -----------------------------------------
+
+    workspace_suggestion = st.session_state.get("workspace_ai_suggestion")
+
+    if workspace_suggestion is not None:
+        if workspace_suggestion.get("error"):
+            st.warning(workspace_suggestion["error"])
+        else:
+            suggestions = workspace_suggestion.get("suggestions", [])
+
+            if suggestions:
+                st.markdown("### ✨ AI Suggested Changes")
+                st.caption(
+                    "AI suggestions are optional. "
+                    "Review each change before applying it."
+                )
+
+                for index, suggestion in enumerate(suggestions):
+                    action = suggestion.get("action", "rename")
+                    current_section = suggestion.get("current_section")
+                    suggested_section = suggestion.get("suggested_section")
+                    reason = suggestion.get("reason", "")
+
+                    with st.container(border=True):
+                        if action == "rename":
+                            st.markdown(
+                                f"**Rename:** {current_section} → **{suggested_section}**"
+                            )
+                            apply_label = "✓ Apply Rename"
+
+                        elif action == "remove":
+                            st.markdown(
+                                f"**Suggested removal:** {current_section}"
+                            )
+                            apply_label = "Remove Section"
+
+                        elif action == "add":
+                            st.markdown(
+                                f"**Suggested addition:** {suggested_section}"
+                            )
+                            apply_label = "＋ Add Section"
+
+                        else:
+                            continue
+
+                        if reason:
+                            st.caption(reason)
+
+                        apply_col, keep_col = st.columns(2)
+
+                        with apply_col:
+                            if st.button(
+                                apply_label,
+                                key=f"apply_workspace_{index}"
+                            ):
+                                updated_sections = list(selected_sections)
+
+                                if action == "rename":
+                                    updated_sections = [
+                                        suggested_section
+                                        if section == current_section
+                                        else section
+                                        for section in updated_sections
+                                    ]
+
+                                elif action == "remove":
+                                    updated_sections = [
+                                        section
+                                        for section in updated_sections
+                                        if section != current_section
+                                    ]
+
+                                elif action == "add":
+                                    if suggested_section not in updated_sections:
+                                        updated_sections.append(suggested_section)
+
+                                # Save project data first. Do not directly modify
+                                # a widget key after that widget was instantiated.
+                                st.session_state.new_project_data[
+                                    "workspace_sections"
+                                ] = updated_sections
+
+                                if "project_workspace_sections" in st.session_state:
+                                    del st.session_state["project_workspace_sections"]
+
+                                st.session_state.workspace_ai_suggestion = None
+                                st.rerun()
+
+                        with keep_col:
+                            if st.button(
+                                "Keep Mine",
+                                key=f"keep_workspace_{index}"
+                            ):
+                                remaining = [
+                                    item
+                                    for i, item in enumerate(suggestions)
+                                    if i != index
+                                ]
+                                st.session_state.workspace_ai_suggestion = {
+                                    "suggestions": remaining
+                                }
+                                st.rerun()
+            else:
+                st.info(
+                    "Your current workspace already fits the project well. "
+                    "AI did not suggest any changes."
+                )
+
+    st.markdown("#### Your Workspace")
+
+    for section in selected_sections:
+        st.write(f"✓ {section}")
+
+
+    back_col, continue_col = st.columns([1, 1])
+
+    with back_col:
+        if st.button("← Back", key="workspace_back"):
+            st.session_state.new_project_data["workspace_sections"] = selected_sections
+            st.session_state.project_setup_step = 1
+            st.rerun()
+
+    with continue_col:
+        if st.button(
+            "Continue →",
+            type="primary",
+            key="workspace_continue"
+        ):
+            if not selected_sections:
+                st.warning("Please select at least one workspace section.")
+            else:
+                st.session_state.new_project_data["workspace_sections"] = selected_sections
+                st.session_state.project_setup_step = 3
+                st.rerun()
+
+                # ---------------------------------------------------------
+# STEP 3 — AI WORKSPACE DESIGNER
+# ---------------------------------------------------------
+
+if (
+    st.session_state.creating_project
+    and st.session_state.project_setup_step == 3
+):
+    st.markdown("## ✨ AI Workspace Designer")
+
+    st.write(
+        "Your research workspace is ready. "
+        "Next, AI will help design how your workspace should look."
+    )
+
+    st.markdown("#### Selected Workspace")
+
+    for section in st.session_state.new_project_data["workspace_sections"]:
+        st.write(f"✓ {section}")
+
+    if st.button("← Back to Workspace", key="designer_back"):
+        st.session_state.project_setup_step = 2
+        st.rerun()
 
 
 # ---------------------------------------------------------
@@ -1748,6 +2296,8 @@ st.write(
     "Compare previous user feedback with current feedback "
     "to understand how UX problems are changing over time."
 )
+
+
 
 trend_col1, trend_col2 = st.columns(2)
 

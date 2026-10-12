@@ -2275,6 +2275,12 @@ st.divider()
 if "previous_trend_analysis" not in st.session_state:
     st.session_state.previous_trend_analysis = None
 
+if "previous_trend_file_signature" not in st.session_state:
+    st.session_state.previous_trend_file_signature = None
+
+if "current_trend_file_signature" not in st.session_state:
+    st.session_state.current_trend_file_signature = None
+
 if "trend_theme_matches" not in st.session_state:
     st.session_state.trend_theme_matches = None
 
@@ -2318,10 +2324,10 @@ with trend_col2:
 if previous_file is not None and current_file is not None:
     previous_text = previous_file.getvalue().decode("utf-8")
     current_text = current_file.getvalue().decode("utf-8")
+
     previous_signature = hashlib.sha256(
         previous_file.getvalue()
     ).hexdigest()
-
     current_signature = hashlib.sha256(
         current_file.getvalue()
     ).hexdigest()
@@ -2336,9 +2342,9 @@ if previous_file is not None and current_file is not None:
     ):
         try:
             if (
-                st.session_state.previous_trend_analysis is None
-                or st.session_state.previous_trend_file_signature != previous_signature
-            ):
+    st.session_state.current_trend_analysis is None
+    or st.session_state.current_trend_file_signature != current_signature
+):
                 st.session_state.previous_trend_analysis = run_ux_research(
                     "Analyze these user reviews and identify the UX problems.",
                     reviews_text=previous_text,
@@ -2357,6 +2363,7 @@ if previous_file is not None and current_file is not None:
                         reviews_text=current_text,
                         return_analysis=True
                     )
+                    st.session_state.current_trend_file_signature = current_signature
 
             st.session_state.current_trend_file_signature = current_signature
 

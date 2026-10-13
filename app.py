@@ -65,37 +65,132 @@ def parse_local_reviews(text):
     return reviews
 
 
+
 def classify_local_review(review):
-    text = review.lower()
+    text = " ".join(review.lower().split())
     problems = []
 
-    if any(k in text for k in [
-        "price", "pricing", "final amount", "higher than i expected",
-        "delivery charges"
-    ]):
-        problems.append("Price Transparency")
+    categories = {
+        "Price Transparency": [
+            "price", "pricing", "final amount",
+            "higher than i expected",
+            "delivery charge", "delivery fee",
+            "hidden charge", "extra charge",
+            "unexpected cost", "total cost",
+            "checkout amount", "cost more",
+            "price mismatch"
+        ],
 
-    if any(k in text for k in [
-        "arrive", "delivery time", "estimated delivery", "when my groceries"
-    ]):
-        problems.append("Delivery Information")
+        "Delivery Information": [
+            "arrive", "delivery time",
+            "estimated delivery",
+            "when my groceries",
+            "delivery date", "delivery slot",
+            "delivery estimate", "delivery eta",
+            "eta", "when will it come",
+            "when will it arrive",
+            "delivery status"
+        ],
 
-    if any(k in text for k in [
-        "search", "irrelevant results"
-    ]):
-        problems.append("Search Functionality")
+        "Search Functionality": [
+            "search", "irrelevant results",
+            "can't find", "cannot find",
+            "couldn't find", "could not find",
+            "hard to find", "difficult to find",
+            "wrong results", "no results",
+            "find the product",
+            "find products"
+        ],
 
-    if any(k in text for k in [
-        "best for me",
-        "too many products",
-        "guidance to choose",
-        "compare similar",
-        "couldn't understand which",
-        "could not understand which"
-    ]):
-        problems.append("Product Selection")
+        "Product Selection": [
+            "best for me", "too many products",
+            "guidance to choose",
+            "compare similar",
+            "couldn't understand which",
+            "could not understand which",
+            "which product", "which one",
+            "product comparison",
+            "compare products",
+            "difficult to choose",
+            "hard to choose",
+            "confusing options",
+            "too many choices",
+            "product recommendation"
+            ],
+
+                "Payment & Refund Issues": [
+            "payment failed",
+            "payment failure",
+            "payment declined",
+            "amount was still deducted",
+            "money was deducted",
+            "deducted money",
+            "refunded",
+            "refund",
+            "try again",
+            "payment error"
+        ],
+
+        "Checkout Experience": [
+            "checkout screen",
+            "checkout step",
+            "during checkout",
+            "final checkout",
+            "checkout process",
+            "complicated checkout",
+            "confusing checkout"
+        ],
+
+
+        "App Performance & Stability": [
+            "app crashes",
+            "app crashed",
+            "keeps crashing",
+            "crashes every time",
+            "app freezes",
+            "app froze",
+            "app is slow",
+            "slow loading",
+            "takes too long to load",
+            "loading forever",
+            "app not responding",
+            "screen freezes",
+            "app keeps closing",
+            "stuck on loading",
+            "order history crashes"
+        ],
+
+
+        "Login & Account Issues": [
+            "cannot log in",
+            "can't log in",
+            "couldn't log in",
+            "login failed",
+            "login error",
+            "unable to sign in",
+            "sign in failed",
+            "otp not received",
+            "otp not working",
+            "verification failed",
+            "account locked",
+            "password reset",
+            "account access",
+            "forgot my password",
+            "forgot password",
+            "recover my account",
+            "account recovery",
+            "reset my password"
+        ],
+
+
+    }
+
+    for category, keywords in categories.items():
+        if any(keyword in text for keyword in keywords):
+            problems.append(category)
 
     return problems or ["Other UX Issue"]
+
 
 
 def priority_score(frequency_score, severity, business_impact):
@@ -128,14 +223,20 @@ def run_local_demo(text):
     for item in classifications:
         grouped.setdefault(item["problem"], []).append(item)
 
-    # Evidence-based demo scores matching the V3 sample analysis.
+
+    # Demo baseline scores: (severity, business impact)
     score_map = {
+        "App Performance & Stability": (8, 8),
+        "Login & Account Issues": (7, 8),
         "Price Transparency": (7, 9),
         "Product Selection": (7, 7),
         "Delivery Information": (6, 7),
         "Search Functionality": (5, 6),
+        "Checkout Experience": (7, 8),
+        "Payment & Refund Issues": (8, 9),
         "Other UX Issue": (5, 5),
     }
+
 
     problems = []
     for name, items in grouped.items():
@@ -155,7 +256,7 @@ def run_local_demo(text):
             "score": score,
             "priority": level,
             "users": [x["user"] for x in items],
-            "evidence": [x["review"] for x in items],
+            "evidence": list(dict.fromkeys(x["review"] for x in items)),
         })
 
     problems.sort(key=lambda x: (-x["score"], -x["affected"], x["name"]))
@@ -506,7 +607,7 @@ def answer_research_question(question, data):
             "For example: Compare Price Transparency and "
             "Delivery Information."
         )
-    
+
         # V4.6 — Research Summary
     if (
         "research summary" in q
@@ -1065,38 +1166,46 @@ with st.sidebar:
     </div>
     """)
 
-    st.html(
-        '<div class="nav-item nav-active">🏠 &nbsp; Home</div>'
+    selected_page = st.radio(
+        "Navigation",
+        [
+            "🏠 Home",
+            "🔍 Analyze Reviews",
+            "📊 Results",
+            "🎯 Priorities",
+            "💡 Insights",
+            "💬 AI Chat",
+            "📄 Export Report",
+            "⚙️ Settings"
+        ],
+        label_visibility="collapsed",
+        key="sidebar_navigation"
     )
+    st.markdown("""
+<style>
+section[data-testid="stSidebar"] div[role="radiogroup"] {
+    gap: 8px;
+}
 
-    st.html(
-        '<div class="nav-item">🔍 &nbsp; Analyze Reviews</div>'
-    )
+section[data-testid="stSidebar"] div[role="radiogroup"] label {
+    padding: 12px 14px;
+    border-radius: 10px;
+    width: 100%;
+    min-height: 48px;
+    background: rgba(128, 128, 128, 0.08);
+    cursor: pointer;
+}
 
-    st.html(
-        '<div class="nav-item">📊 &nbsp; Results</div>'
-    )
+section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
+    background: rgba(128, 128, 128, 0.18);
+}
 
-    st.html(
-        '<div class="nav-item">🎯 &nbsp; Priorities</div>'
-    )
-
-    st.html(
-        '<div class="nav-item">💡 &nbsp; Insights</div>'
-    )
-
-    st.html(
-        '<div class="nav-item">💬 &nbsp; AI Chat</div>'
-    )
-
-    st.html(
-        '<div class="nav-item">📄 &nbsp; Export Report</div>'
-    )
-
-    st.html(
-        '<div class="nav-item">⚙️ &nbsp; Settings</div>'
-    )
-
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
+    background: rgba(99, 102, 241, 0.18);
+    font-weight: 600;
+}
+</style>
+""", unsafe_allow_html=True)
     st.html("""
     <div class="sidebar-bottom">
         <b>Built by Naveen</b><br>
@@ -1105,6 +1214,951 @@ with st.sidebar:
         </span>
     </div>
     """)
+
+            # ==========================================
+# V5.1 — SIDEBAR PAGE ROUTING
+# ==========================================
+if selected_page == "🏠 Home":
+    st.title("🏠 Research Dashboard")
+    st.write("Welcome to your AI-powered UX research workspace.")
+
+    st.subheader("🚀 Quick Actions")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("🔍 Start UX Analysis", use_container_width=True):
+            st.session_state["sidebar_navigation"] = "🔍 Analyze Reviews"
+            st.rerun()
+
+    with col2:
+        if st.button("📊 View Research Results", use_container_width=True):
+            st.session_state["sidebar_navigation"] = "📊 Results"
+            st.rerun()
+                # This line is still inside the Home condition
+    st.stop()
+
+elif selected_page == "🔍 Analyze Reviews":
+    st.info("🔍 Analyze Reviews page selected.")
+
+elif selected_page == "📊 Results":
+    st.info("📊 Results page selected.")
+
+elif selected_page == "🎯 Priorities":
+    st.info("🎯 Priorities page selected.")
+elif selected_page == "💡 Insights":
+    pass
+
+elif selected_page == "💬 AI Chat":
+    st.info("💬 AI Chat page selected.")
+
+elif selected_page == "📄 Export Report":
+    st.info("📄 Export Report page selected.")
+
+elif selected_page == "⚙️ Settings":
+    st.info("⚙️ Settings page selected.")
+
+    # ==========================================
+# V5.1 — PAGE VISIBILITY
+# ==========================================
+
+if selected_page == "🏠 Home":
+    st.stop()
+
+if selected_page == "📊 Results":
+    st.title("📊 UX Research Results")
+    st.subheader("Research Overview")
+
+    data = st.session_state.get("analysis_data")
+
+    if isinstance(data, dict):
+        total_users = data.get("total", 0)
+        problems = data.get("problems", [])
+
+        total_problems = len(problems)
+
+        high_priority = sum(
+            1
+            for problem in problems
+            if problem.get("priority", "").upper() == "HIGH"
+        )
+    else:
+        total_users = "—"
+        total_problems = "—"
+        high_priority = "—"
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("👥 Users Analyzed", total_users)
+
+    with col2:
+        st.metric("🔍 UX Problems", total_problems)
+
+    with col3:
+        st.metric("🚨 High Priority", high_priority)
+
+    st.divider()
+
+    if isinstance(data, dict) and data.get("problems"):
+        st.subheader("📊 Users Affected by UX Problems")
+
+        chart_data = {
+            problem["name"]: problem["affected"]
+            for problem in data["problems"]
+        }
+
+        st.bar_chart(chart_data)
+
+        st.subheader("🎯 UX Priority Distribution")
+
+        priority_counts = {
+            "CRITICAL": 0,
+            "HIGH": 0,
+            "MEDIUM": 0,
+            "LOW": 0
+        }
+
+        for problem in data["problems"]:
+            priority = problem.get("priority", "").upper()
+
+            if priority in priority_counts:
+                priority_counts[priority] += 1
+
+        st.bar_chart(priority_counts)
+
+        st.subheader("🔍 UX Problems Breakdown")
+
+        problem_rows = []
+
+        for problem in data["problems"]:
+            problem_rows.append({
+                "UX Problem": problem.get("name", "Unknown"),
+                "Affected Users": problem.get("affected", 0),
+                "Affected %": f"{problem.get('percentage', 0)}%",
+                "Priority": problem.get("priority", "N/A")
+            })
+
+        st.dataframe(
+            problem_rows,
+            use_container_width=True,
+            hide_index=True
+        )
+
+
+
+    result = st.session_state.get("analysis_result")
+    with st.expander("🔧 Debug Research Data"):
+        data = st.session_state.get("analysis_data")
+
+        if data is not None:
+            st.write(data)
+        else:
+            st.info("No structured analysis data available.")
+
+    if result:
+        st.success("✅ Research analysis completed!")
+        st.markdown(str(result))
+    else:
+        st.info(
+            "No research results available yet. "
+            "Go to Analyze Reviews and run an analysis first."
+        )
+
+    st.stop()
+
+if selected_page == "🎯 Priorities":
+    st.title("🎯 UX Research Priorities")
+    st.write("UX problems ranked by priority score.")
+
+    data = st.session_state.get("analysis_data")
+
+    if isinstance(data, dict) and data.get("problems"):
+        ranked_problems = sorted(
+            data["problems"],
+            key=lambda problem: problem.get("score", 0),
+            reverse=True
+        )
+
+        for rank, problem in enumerate(ranked_problems, 1):
+            with st.container(border=True):
+                st.subheader(f"{rank}. {problem['name']}")
+                st.write(f"Priority: {problem['priority']}")
+                st.write(f"Priority Score: {problem['score']}/30")
+                score = problem.get("score", 0)
+
+                st.progress(
+                    min(max(float(score) / 30, 0.0), 1.0),
+                    text=f"Priority Strength: {score}/30"
+                )
+                st.write(f"Affected Users: {problem['affected']}")
+                st.write(
+                    f"Severity: {problem.get('severity', 'N/A')}/10"
+                )
+
+                st.write(
+                    f"Business Impact: {problem.get('business_impact', 'N/A')}/10")
+                priority = str(problem.get("priority", "")).upper()
+
+                if priority == "CRITICAL":
+                    recommendation = "Investigate immediately and prioritize a solution."
+                elif priority == "HIGH":
+                    recommendation = "Plan a UX improvement in the next development cycle."
+                elif priority == "MEDIUM":
+                    recommendation = "Conduct additional research and schedule improvements."
+                else:
+                    recommendation = "Monitor user feedback and revisit if the issue grows."
+
+                st.info(f"💡 Recommended Action: {recommendation}")
+                with st.expander("🧠 How was this priority calculated?"):
+                    st.write(
+                        "This priority score combines three factors:"
+                    )
+
+                    st.write(
+                        f"📊 Frequency Score: "
+                        f"{problem.get('frequency_score', 'N/A')}/10"
+                    )
+
+                    st.write(
+                        f"⚠️ Severity: "
+                        f"{problem.get('severity', 'N/A')}/10"
+                    )
+
+                    st.write(
+                        f"💼 Business Impact: "
+                        f"{problem.get('business_impact', 'N/A')}/10"
+                    )
+
+                    st.caption(
+                        "Priority Score = Frequency Score + "
+                        "Severity + Business Impact"
+                    )
+    else:
+        st.info("Run a Local Demo analysis first to see your priorities.")
+
+    st.stop()
+
+    if isinstance(data, dict) and data.get("problems"):
+        problems = data["problems"]
+
+        most_common = max(
+            problems,
+            key=lambda p: p.get("affected", 0)
+        )
+
+        highest_priority = max(
+            problems,
+            key=lambda p: p.get("score", 0)
+        )
+
+        high_count = sum(
+            1 for p in problems
+            if str(p.get("priority", "")).upper()
+            in ["HIGH", "CRITICAL"]
+        )
+
+        st.subheader("🔎 Key Research Findings")
+
+        st.info(
+            f"👥 Most Common Problem: "
+            f"{most_common.get('name', 'Unknown')} "
+            f"affects {most_common.get('affected', 0)} users."
+        )
+
+        st.warning(
+            f"🎯 Highest Priority: "
+            f"{highest_priority.get('name', 'Unknown')} "
+            f"(Score: {highest_priority.get('score', 0)}/30)"
+        )
+
+        st.success(
+            f"📊 {high_count} UX problems have "
+            f"HIGH or CRITICAL priority."
+        )
+
+
+        st.divider()
+        st.subheader("🗣️ Evidence From User Reviews")
+
+        for problem in problems:
+            problem_name = problem.get("name", "Unknown Problem")
+            affected = problem.get("affected", 0)
+            percentage = problem.get("percentage", 0)
+            evidence = problem.get("evidence", [])
+
+            with st.expander(f"🔍 {problem_name}"):
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.metric("👥 Affected Users", affected)
+
+                with col2:
+                    st.metric(
+                        "📊 Affected Percentage",
+                        f"{percentage}%"
+                    )
+
+                st.markdown("**What users said:**")
+
+                if evidence:
+                    for review in evidence:
+                        st.write(f"💬 {review}")
+                else:
+                    st.caption("No review evidence available.")
+
+
+
+# ==========================================
+# V5.1 - UX INSIGHTS PAGE
+# ==========================================
+
+if selected_page == "💡 Insights":
+    st.title("💡 UX Research Insights")
+    st.write("Understand the key findings from your research.")
+
+    data = st.session_state.get("analysis_data")
+
+    if isinstance(data, dict) and data.get("problems"):
+        problems = data["problems"]
+
+        top_problem = max(
+            problems,
+            key=lambda p: p.get("affected", 0)
+        )
+
+        highest_priority = max(
+            problems,
+            key=lambda p: p.get("score", 0)
+        )
+
+        high_priority_count = sum(
+            1 for p in problems
+            if str(p.get("priority", "")).upper()
+            in ["CRITICAL", "HIGH"]
+        )
+
+        st.subheader("📊 Research Summary")
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.metric(
+                "👥 Users Analyzed",
+                data.get("total", 0)
+            )
+
+        with col2:
+            st.metric(
+                "🔍 UX Problems",
+                len(problems)
+            )
+
+        with col3:
+            st.metric(
+                "🚨 High Priority Issues",
+                high_priority_count
+            )
+
+        st.divider()
+
+        st.subheader("🔎 Key Research Findings")
+
+        st.info(
+            f"👥 Most Common Problem: "
+            f"{top_problem.get('name', 'Unknown')} "
+            f"affects {top_problem.get('affected', 0)} users."
+        )
+
+        st.warning(
+            f"🎯 Highest Priority Problem: "
+            f"{highest_priority.get('name', 'Unknown')} "
+            f"(Score: {highest_priority.get('score', 0)}/30)"
+        )
+
+        st.success(
+            f"📊 {high_priority_count} problems are classified "
+            f"as HIGH or CRITICAL priority."
+        )
+
+
+        st.divider()
+        st.subheader("🗣️ Evidence From User Reviews")
+
+        for problem in problems:
+            problem_name = problem.get("name", "Unknown Problem")
+            affected = problem.get("affected", 0)
+            percentage = problem.get("percentage", 0)
+            evidence = problem.get("evidence", [])
+
+            with st.expander(f"🔍 {problem_name}"):
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.metric("👥 Affected Users", affected)
+
+                with col2:
+                    st.metric("📊 Affected Percentage", f"{percentage}%")
+
+                # Actionable UX recommendations
+                recommendations = {
+                    "Price Transparency": (
+                        "Show the full price, including delivery "
+                        "charges, before checkout."
+                    ),
+                    "Delivery Information": (
+                        "Display the estimated delivery time "
+                        "on product and checkout screens."
+                    ),
+                    "Checkout Experience": (
+                        "Simplify checkout, reduce unnecessary "
+                        "steps, and show order progress."
+                    ),
+                    "Payment & Refund Issues": (
+                        "Show clear payment status, refund "
+                        "timelines, and recovery options."
+                    ),
+                    "Product Search": (
+                        "Improve search relevance and add "
+                        "filters to help users find products."
+                    ),
+                    "Other UX Issue": (
+                        "Review the user feedback and investigate "
+                        "the underlying usability problem."
+                    ),
+
+
+                    "Login & Account Issues": (
+                        "Improve OTP delivery reliability, "
+                        "provide clear verification errors, "
+                        "and simplify password reset "
+                        "and account recovery."
+                    ),
+                    "App Performance & Stability": (
+                        "Fix app crashes, improve loading speed, "
+                        "and test stability across devices."
+                    ),
+                    "Search Functionality": (
+                        "Improve search accuracy, provide "
+                        "relevant results, and make products "
+                        "easier to discover."
+                    ),
+
+                }
+
+                recommendation = recommendations.get(
+                    problem_name,
+                    "Investigate this issue through user research "
+                    "and test a targeted design improvement."
+                )
+
+
+                # Evidence-based performance recommendations
+                if problem_name == "App Performance & Stability":
+                    evidence_text = " ".join(
+                        str(review).lower()
+                        for review in evidence
+                    )
+
+                    improvements = []
+
+                    if any(
+                        word in evidence_text
+                        for word in ["crash", "crashed", "freez"]
+                    ):
+                        improvements.append(
+                            "Investigate crashes, fix reproducible "
+                            "errors, and test app stability."
+                        )
+
+                    if any(
+                        word in evidence_text
+                        for word in ["slow", "loading", "takes too long"]
+                    ):
+                        improvements.append(
+                            "Optimize loading speed, reduce unnecessary "
+                            "processing, and test performance "
+                            "on slower devices."
+                        )
+
+                    if improvements:
+                        recommendation = " ".join(improvements)
+
+
+                st.markdown("**💡 Recommended UX Improvement:**")
+                st.success(recommendation)
+
+                st.divider()
+
+
+                st.markdown("**What users said:**")
+
+                if evidence:
+                    for review in dict.fromkeys(evidence):
+                        st.write(f"💬 {review}")
+                else:
+                    st.caption("No review evidence available.")
+
+
+    else:
+        st.info(
+            "No research insights available yet. "
+            "Run a Local Demo analysis first."
+        )
+
+    st.stop()
+
+
+# ==========================================
+# V5.1 - CONVERSATIONAL AI CHAT
+# ==========================================
+
+if selected_page == "💬 AI Chat":
+    st.title("💬 AI Research Chat")
+    st.write("Ask questions about your UX research findings.")
+
+    data = st.session_state.get("analysis_data")
+
+    if not isinstance(data, dict) or not data.get("problems"):
+        st.info(
+            "No research data available yet. "
+            "Run a Local Demo analysis first."
+        )
+
+    else:
+        problems = data["problems"]
+
+        st.success("✅ Your UX research data is ready!")
+
+        st.markdown("### 💡 Suggested Questions")
+        st.markdown(
+            "- Which UX problem affects the most users?\n"
+            "- Which problem has the highest priority?\n"
+            "- How many UX problems were identified?"
+        )
+
+        # Identify the current dataset so old chat messages
+        # are not mixed with a new analysis.
+        dataset_signature = repr(data)
+
+        if (
+            "research_chat_messages" not in st.session_state
+            or st.session_state.get("research_chat_dataset")
+            != dataset_signature
+        ):
+            st.session_state["research_chat_messages"] = [
+                {
+                    "role": "assistant",
+                    "content": (
+                        "Hello! 👋 I'm your UX Research Agent. "
+                        "Ask me about your research findings."
+                    )
+                }
+            ]
+            st.session_state["research_chat_dataset"] = dataset_signature
+
+        # Display conversation history
+        for message in st.session_state["research_chat_messages"]:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        # Chat input
+        question = st.chat_input(
+            "Ask your UX Research Agent..."
+        )
+
+        if question:
+            st.session_state["research_chat_messages"].append(
+                {
+                    "role": "user",
+                    "content": question
+                }
+            )
+
+            with st.chat_message("user"):
+                st.markdown(question)
+
+            question_lower = question.lower().strip()
+
+            # Existing research question logic
+
+
+            if (
+                "improve" in question_lower
+                or "recommend" in question_lower
+                or "solution" in question_lower
+                or "suggest" in question_lower
+            ):
+                recommendations = {
+                    "Delivery Information": (
+                        "Improve delivery ETA accuracy, provide "
+                        "real-time order tracking, and notify users "
+                        "whenever the estimated arrival time changes."
+                    ),
+                    "Checkout Experience": (
+                        "Simplify checkout steps, clearly display "
+                        "order details, and make it easier to complete purchases."
+                    ),
+                    "Payment & Refund Issues": (
+                        "Provide clear payment status, explain refund "
+                        "timelines, and offer recovery options for failed payments."
+                    ),
+                    "App Performance & Stability": (
+                        "Investigate crashes, improve loading performance, "
+                        "and test the app across supported devices."
+                    ),
+                    "Login & Account Issues": (
+                        "Improve login error messages, OTP delivery, "
+                        "and account recovery options."
+                    ),
+                }
+
+                matched_problem = next(
+                    (
+                        p for p in problems
+                        if p.get("name", "").lower() in question_lower
+                    ),
+                    None
+                )
+
+                if matched_problem:
+                    name = matched_problem["name"]
+                    suggestion = recommendations.get(
+                        name,
+                        "Review the user evidence and test "
+                        "a targeted UX improvement."
+                    )
+
+
+                    # Refine recommendations using review evidence
+                    evidence = matched_problem.get("evidence", [])
+                    evidence_text = " ".join(
+                        str(review).lower() for review in evidence
+                    )
+
+                    if name == "Delivery Information":
+                        if any(
+                            phrase in evidence_text
+                            for phrase in [
+                                "inaccurate",
+                                "kept moving",
+                                "changed repeatedly",
+                                "later than",
+                                "very late",
+                            ]
+                        ):
+                            suggestion = (
+                                "Prioritize accurate delivery estimates, "
+                                "show real-time ETA updates, and proactively "
+                                "notify customers when delays occur."
+                            )
+
+
+                    elif name == "Payment & Refund Issues":
+                        if any(
+                            phrase in evidence_text
+                            for phrase in [
+                                "deducted",
+                                "payment failed",
+                                "payment failure",
+                                "payment declined",
+                            ]
+                        ):
+                            suggestion = (
+                                "Show real-time transaction status, "
+                                "prevent duplicate payment attempts, "
+                                "and clearly explain refund timelines "
+                                "when money is deducted after a failed payment."
+                            )
+
+                        elif "refund" in evidence_text:
+                            suggestion = (
+                                "Provide a visible refund tracker, "
+                                "clear refund timelines, and notifications "
+                                "when refund status changes."
+                            )
+
+
+                    elif name == "Checkout Experience":
+                        if any(
+                            phrase in evidence_text
+                            for phrase in [
+                                "added charges",
+                                "unexpected fees",
+                                "did not see earlier",
+                                "hidden charges",
+                                "final checkout step",
+                            ]
+                        ):
+                            suggestion = (
+                                "Show all fees and delivery charges "
+                                "before checkout begins. Keep the "
+                                "total order cost visible throughout "
+                                "checkout so users are not surprised "
+                                "by additional charges."
+                            )
+
+                            if any(
+                                phrase in evidence_text
+                                for phrase in [
+                                    "payment failed",
+                                    "try again",
+                                    "payment error",
+                                ]
+                            ):
+                                suggestion += (
+                                    " Also provide clear payment failure "
+                                    "messages, safe retry options, and "
+                                    "confirmation that users will not "
+                                    "be charged twice."
+                                )
+
+                        elif any(
+                            phrase in evidence_text
+                            for phrase in [
+                                "payment failed",
+                                "try again",
+                                "payment error",
+                            ]
+                        ):
+                            suggestion = (
+                                "Improve payment error messages, "
+                                "provide safe retry options, and "
+                                "clearly communicate transaction status."
+                            )
+
+                        elif any(
+                            phrase in evidence_text
+                            for phrase in [
+                                "complicated",
+                                "confusing",
+                                "too many steps",
+                                "checkout process",
+                            ]
+                        ):
+                            suggestion = (
+                                "Simplify checkout, reduce unnecessary "
+                                "steps, and test the redesigned "
+                                "checkout flow with users."
+                            )
+
+
+                    elif name == "Login & Account Issues":
+                        improvements = []
+
+                        if any(
+                            phrase in evidence_text
+                            for phrase in ["otp", "verification code"]
+                        ):
+                            improvements.append(
+                                "Improve OTP delivery reliability, "
+                                "provide a resend option, and show "
+                                "clear verification error messages."
+                            )
+
+                        if any(
+                            phrase in evidence_text
+                            for phrase in [
+                                "password", "forgot",
+                                "recover", "reset"
+                            ]
+                        ):
+                            improvements.append(
+                                "Simplify password reset and account "
+                                "recovery, with clear instructions "
+                                "at every step."
+                            )
+
+                        if improvements:
+                            suggestion = " ".join(improvements)
+
+
+
+
+                    elif name == "App Performance & Stability":
+                        improvements = []
+
+                        if any(
+                            phrase in evidence_text
+                            for phrase in [
+                                "crash", "crashed",
+                                "crashing", "freez"
+                            ]
+                        ):
+                            improvements.append(
+                                "Investigate app crashes and freezing, "
+                                "fix reproducible errors, and test "
+                                "stability across supported devices."
+                            )
+
+                        if any(
+                            phrase in evidence_text
+                            for phrase in [
+                                "slow", "loading",
+                                "takes too long"
+                            ]
+                        ):
+                            improvements.append(
+                                "Optimize loading speed, reduce "
+                                "unnecessary processing, and measure "
+                                "performance on slower devices."
+                            )
+
+                        if improvements:
+                            suggestion = " ".join(improvements)
+
+
+
+                    answer = (
+                        f"**Recommended improvement for {name}:**\n\n"
+                        f"{suggestion}"
+                    )
+
+
+                    # Include supporting review evidence
+                    evidence = matched_problem.get("evidence", [])
+
+                    if evidence:
+                        answer += (
+                            "\n\n**🗣️ Supporting User Reviews:**\n"
+                        )
+
+                        for review in evidence[:3]:
+                            answer += f"\n- {review}"
+
+
+                else:
+                    available_categories = [
+                        p.get("name", "Unknown")
+                        for p in problems
+                    ]
+
+                    category_list = "\n".join(
+                        f"- {category}"
+                        for category in available_categories
+                    )
+
+                    answer = (
+                        "I couldn't find that UX problem in "
+                        "the currently analyzed reviews.\n\n"
+                        "**Available UX problem categories:**\n"
+                        f"{category_list}\n\n"
+                        "You can ask about one of these categories "
+                        "or upload a different review dataset."
+                    )
+
+
+
+
+            elif (
+                "why" in question_lower
+                or "evidence" in question_lower
+            ):
+                matched_problem = next(
+                    (
+                        p for p in problems
+                        if p.get("name", "").lower()
+                        in question_lower
+                    ),
+                    None
+                )
+
+                if matched_problem is None:
+                    answer = (
+                        "Please mention a UX problem category, "
+                        "such as Delivery Information, so I can "
+                        "explain the supporting evidence."
+                    )
+                else:
+                    name = matched_problem.get("name", "Unknown")
+                    affected = matched_problem.get("affected", 0)
+                    percentage = matched_problem.get("percentage", 0)
+                    evidence = matched_problem.get("evidence", [])
+
+                    answer = (
+                        f"**{name}** affects **{affected} users "
+                        f"({percentage}%)**.\n\n"
+                        f"**Evidence from user reviews:**\n"
+                    )
+
+                    if evidence:
+                        for review in evidence[:3]:
+                            answer += f"\n- {review}"
+                    else:
+                        answer += "\nNo supporting review quotes available."
+
+            elif (
+                "priority" in question_lower
+                or "fix first" in question_lower
+                or "fix" in question_lower
+            ):
+                problem = max(
+                    problems,
+                    key=lambda p: p.get("score", 0)
+                )
+
+                answer = (
+                    f"The highest-priority UX problem is "
+                    f"**{problem.get('name', 'Unknown')}**, "
+                    f"with a score of "
+                    f"**{problem.get('score', 0)}/30**."
+                )
+
+            elif (
+                "most" in question_lower
+                or "common" in question_lower
+            ):
+                problem = max(
+                    problems,
+                    key=lambda p: p.get("affected", 0)
+                )
+
+                answer = (
+                    f"The most common UX problem is "
+                    f"**{problem.get('name', 'Unknown')}**, "
+                    f"affecting "
+                    f"**{problem.get('affected', 0)} users**."
+                )
+
+            elif (
+                "how many" in question_lower
+                or "total" in question_lower
+            ):
+                answer = (
+                    f"Your research identified "
+                    f"**{len(problems)} UX problem categories**."
+                )
+
+            else:
+                answer = (
+                    "I can currently answer questions about "
+                    "the most common UX problems, "
+                    "highest-priority issues, and "
+                    "total UX problem categories."
+                )
+
+            with st.chat_message("assistant"):
+                st.markdown(answer)
+
+            st.session_state["research_chat_messages"].append(
+                {
+                    "role": "assistant",
+                    "content": answer
+                }
+            )
+
+    st.stop()
+
+
+
+# ==========================================
+# V5.1 - OTHER PAGES
+# ==========================================
+
+if selected_page != "🔍 Analyze Reviews":
+    st.info("🚧 This page is under construction.")
+    st.stop()
+
 
 
 # ---------------------------------------------------------
@@ -1693,11 +2747,10 @@ with upload_col:
         )
 
     if st.button(
-            "🧪 Analyze Locally (No API)",
-            use_container_width=True,
-            type="primary"
-        ):
-
+        "🧪 Analyze Locally (No API)",
+        use_container_width=True,
+        type="primary"
+    ):
         with st.spinner("🧮 Python is analyzing your reviews..."):
             data = run_local_demo(reviews_text)
             result = build_local_report(data)
@@ -2321,7 +3374,31 @@ with trend_col2:
         key="current_trend_dataset"
     )
 
+# Keep the button visible when both datasets are uploaded.
+compare_clicked = False
 if previous_file is not None and current_file is not None:
+    compare_clicked = st.button(
+        "📊 Compare UX Trends",
+        type="primary",
+        use_container_width=True,
+        key="compare_ux_trends"
+    )
+
+    # Retain the requested comparison across Streamlit reruns.
+    uploaded_signatures = (
+        hashlib.sha256(previous_file.getvalue()).hexdigest(),
+        hashlib.sha256(current_file.getvalue()).hexdigest(),
+    )
+    if compare_clicked:
+        st.session_state["requested_trend_signatures"] = uploaded_signatures
+
+    show_comparison = (
+        st.session_state.get("requested_trend_signatures") == uploaded_signatures
+    )
+else:
+    show_comparison = False
+
+if show_comparison:
     previous_text = previous_file.getvalue().decode("utf-8")
     current_text = current_file.getvalue().decode("utf-8")
 
@@ -2336,217 +3413,211 @@ if previous_file is not None and current_file is not None:
         "Previous dataset loaded:",
         previous_file.name
     )
-    if st.button(
-        "📊 Compare UX Trends",
-        use_container_width=True
-    ):
-        try:
-            if (
-    st.session_state.current_trend_analysis is None
-    or st.session_state.current_trend_file_signature != current_signature
-):
+    try:
+        if (
+            st.session_state.previous_trend_analysis is None
+            or st.session_state.previous_trend_file_signature != previous_signature
+        ):
+            with st.spinner("Analyzing previous UX dataset..."):
                 st.session_state.previous_trend_analysis = run_ux_research(
                     "Analyze these user reviews and identify the UX problems.",
                     reviews_text=previous_text,
                     return_analysis=True
                 )
-
             st.session_state.previous_trend_file_signature = previous_signature
 
-            if (
-                st.session_state.current_trend_analysis is None
-                or st.session_state.current_trend_file_signature != current_signature
-            ):
-                with st.spinner("Analyzing current UX dataset..."):
-                    st.session_state.current_trend_analysis = run_ux_research(
-                        "Analyze these user reviews and identify the UX problems.",
-                        reviews_text=current_text,
-                        return_analysis=True
-                    )
-                    st.session_state.current_trend_file_signature = current_signature
-
+        if (
+            st.session_state.current_trend_analysis is None
+            or st.session_state.current_trend_file_signature != current_signature
+        ):
+            with st.spinner("Analyzing current UX dataset..."):
+                st.session_state.current_trend_analysis = run_ux_research(
+                    "Analyze these user reviews and identify the UX problems.",
+                    reviews_text=current_text,
+                    return_analysis=True
+                )
             st.session_state.current_trend_file_signature = current_signature
 
-            previous_analysis = st.session_state.previous_trend_analysis
-            current_analysis = st.session_state.current_trend_analysis
+        previous_analysis = st.session_state.previous_trend_analysis
+        current_analysis = st.session_state.current_trend_analysis
 
-            st.success("✅ Previous dataset analysis complete!")
+        st.success("✅ Previous dataset analysis complete!")
 
-            st.write(
-                "Previous dataset users:",
-                previous_analysis["total_users"]
-            )
+        st.write(
+            "Previous dataset users:",
+            previous_analysis["total_users"]
+        )
 
-            st.write(
-                "UX themes found:",
-                len(previous_analysis["problems"])
-            )
+        st.write(
+            "UX themes found:",
+            len(previous_analysis["problems"])
+        )
 
-            st.write(
-                "Current dataset loaded:",
-                current_file.name
-            )
+        st.write(
+            "Current dataset loaded:",
+            current_file.name
+        )
 
-            st.success("✅ Current dataset analysis complete!")
+        st.success("✅ Current dataset analysis complete!")
 
-            st.write(
-                "Current dataset users:",
-                current_analysis["total_users"]
-            )
+        st.write(
+            "Current dataset users:",
+            current_analysis["total_users"]
+        )
 
-            st.write(
-                "Current UX themes found:",
-                len(current_analysis["problems"])
-            )
+        st.write(
+            "Current UX themes found:",
+            len(current_analysis["problems"])
+        )
 
-            previous_themes = [
-                item["problem"]
-                for item in previous_analysis["problems"]
-            ]
+        previous_themes = [
+            item["problem"]
+            for item in previous_analysis["problems"]
+        ]
 
-            current_themes = [
-                item["problem"]
-                for item in current_analysis["problems"]
-            ]
+        current_themes = [
+            item["problem"]
+            for item in current_analysis["problems"]
+        ]
 
-            trend_match_signature = (
-                previous_signature + current_signature
-            )
+        trend_match_signature = (
+            previous_signature + current_signature
+        )
 
-            if (
-                st.session_state.trend_theme_matches is None
-                or st.session_state.trend_match_signature != trend_match_signature
-            ):
-                with st.spinner("Matching UX themes across datasets..."):
-                    st.session_state.trend_theme_matches = match_ux_themes(
-                        previous_themes,
-                        current_themes
+        if (
+            st.session_state.trend_theme_matches is None
+            or st.session_state.trend_match_signature != trend_match_signature
+        ):
+            with st.spinner("Matching UX themes across datasets..."):
+                st.session_state.trend_theme_matches = match_ux_themes(
+                    previous_themes,
+                    current_themes
+                )
+
+            st.session_state.trend_match_signature = trend_match_signature
+
+        theme_matches = st.session_state.trend_theme_matches
+
+        st.success("✅ UX themes matched!")
+
+       # st.write("Theme matching result:")
+        #st.json(theme_matches)
+
+        trend_results = build_ux_trend_comparison(
+            previous_analysis,
+            current_analysis,
+            theme_matches
+        )
+
+        st.subheader("📊 Trend Overview")
+
+        increasing_count = sum(
+            1 for item in trend_results
+            if item["trend"] == "INCREASING"
+        )
+
+        decreasing_count = sum(
+            1 for item in trend_results
+            if item["trend"] == "DECREASING"
+        )
+
+        new_count = sum(
+            1 for item in trend_results
+            if item["trend"] == "NEWLY OBSERVED"
+        )
+
+        not_observed_count = sum(
+            1 for item in trend_results
+            if item["trend"] == "NOT OBSERVED IN CURRENT DATASET"
+        )
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        col1.metric("📈 Increasing", increasing_count)
+        col2.metric("📉 Decreasing", decreasing_count)
+        col3.metric("🆕 Newly Observed", new_count)
+        col4.metric("◯ Not Observed", not_observed_count)
+
+        st.divider()
+        st.subheader("UX Trend Details")
+        st.caption(
+            "Compare how frequently each UX issue appears across the two research datasets."
+        )
+
+        for item in trend_results:
+            problem = item["problem"]
+            previous_users = item["previous_users"]
+            previous_percentage = item["previous_percentage"]
+            current_users = item["current_users"]
+            current_percentage = item["current_percentage"]
+            change = item["change"]
+            trend = item["trend"]
+            match_reason = item["match_reason"]
+
+            with st.container(border=True):
+                st.markdown(f"### {problem}")
+
+                if trend == "INCREASING":
+                    st.info(
+                        "This UX issue appeared more frequently in the current dataset."
+                    )
+                elif trend == "DECREASING":
+                    st.success(
+                        "This UX issue appeared less frequently in the current dataset."
+                    )
+                elif trend == "NEWLY OBSERVED":
+                    st.warning(
+                        "This UX issue was observed in the current dataset but not in the previous dataset."
+                    )
+                else:
+                    st.info(
+                        "This UX issue was not observed in the current dataset."
                     )
 
-                st.session_state.trend_match_signature = trend_match_signature
+                col1, col2, col3 = st.columns(3)
 
-            theme_matches = st.session_state.trend_theme_matches
+                col1.metric(
+                    "Previous Dataset",
+                    f"{previous_percentage}%",
+                    f"{previous_users} users"
+                )
 
-            st.success("✅ UX themes matched!")
+                col2.metric(
+                    "Current Dataset",
+                    f"{current_percentage}%",
+                    f"{current_users} users"
+                )
 
-           # st.write("Theme matching result:")
-            #st.json(theme_matches)
+                if change > 0:
+                    change_text = f"+{change} pp"
+                elif change < 0:
+                    change_text = f"{change} pp"
+                else:
+                    change_text = "0 pp"
 
-            trend_results = build_ux_trend_comparison(
-                previous_analysis,
-                current_analysis,
-                theme_matches
-            )
+                col3.metric(
+                    "Change",
+                    change_text,
+                    help="Difference in percentage points between the previous and current datasets."
+                )
 
-            st.subheader("📊 Trend Overview")
+                if trend == "INCREASING":
+                    status_text = "📈 INCREASING"
+                elif trend == "DECREASING":
+                    status_text = "📉 DECREASING"
+                elif trend == "NEWLY OBSERVED":
+                    status_text = "🆕 NEWLY OBSERVED"
+                else:
+                    status_text = "◯ NOT OBSERVED IN CURRENT DATASET"
 
-            increasing_count = sum(
-                1 for item in trend_results
-                if item["trend"] == "INCREASING"
-            )
+                st.markdown(f"**Status:** {status_text}")
 
-            decreasing_count = sum(
-                1 for item in trend_results
-                if item["trend"] == "DECREASING"
-            )
+                st.caption(
+                    f"Theme match: {match_reason}"
+                )
 
-            new_count = sum(
-                1 for item in trend_results
-                if item["trend"] == "NEWLY OBSERVED"
-            )
-
-            not_observed_count = sum(
-                1 for item in trend_results
-                if item["trend"] == "NOT OBSERVED IN CURRENT DATASET"
-            )
-
-            col1, col2, col3, col4 = st.columns(4)
-
-            col1.metric("📈 Increasing", increasing_count)
-            col2.metric("📉 Decreasing", decreasing_count)
-            col3.metric("🆕 Newly Observed", new_count)
-            col4.metric("◯ Not Observed", not_observed_count)
-
-            st.divider()
-            st.subheader("UX Trend Details")
-            st.caption(
-                "Compare how frequently each UX issue appears across the two research datasets."
-            )
-
-            for item in trend_results:
-                problem = item["problem"]
-                previous_users = item["previous_users"]
-                previous_percentage = item["previous_percentage"]
-                current_users = item["current_users"]
-                current_percentage = item["current_percentage"]
-                change = item["change"]
-                trend = item["trend"]
-                match_reason = item["match_reason"]
-
-                with st.container(border=True):
-                    st.markdown(f"### {problem}")
-
-                    if trend == "INCREASING":
-                        st.info(
-                            "This UX issue appeared more frequently in the current dataset."
-                        )
-                    elif trend == "DECREASING":
-                        st.success(
-                            "This UX issue appeared less frequently in the current dataset."
-                        )
-                    elif trend == "NEWLY OBSERVED":
-                        st.warning(
-                            "This UX issue was observed in the current dataset but not in the previous dataset."
-                        )
-                    else:
-                        st.info(
-                            "This UX issue was not observed in the current dataset."
-                        )
-
-                    col1, col2, col3 = st.columns(3)
-
-                    col1.metric(
-                        "Previous Dataset",
-                        f"{previous_percentage}%",
-                        f"{previous_users} users"
-                    )
-
-                    col2.metric(
-                        "Current Dataset",
-                        f"{current_percentage}%",
-                        f"{current_users} users"
-                    )
-
-                    if change > 0:
-                        change_text = f"+{change} pp"
-                    elif change < 0:
-                        change_text = f"{change} pp"
-                    else:
-                        change_text = "0 pp"
-
-                    col3.metric(
-                        "Change",
-                        change_text,
-                        help="Difference in percentage points between the previous and current datasets."
-                    )
-
-                    if trend == "INCREASING":
-                        status_text = "📈 INCREASING"
-                    elif trend == "DECREASING":
-                        status_text = "📉 DECREASING"
-                    elif trend == "NEWLY OBSERVED":
-                        status_text = "🆕 NEWLY OBSERVED"
-                    else:
-                        status_text = "◯ NOT OBSERVED IN CURRENT DATASET"
-
-                    st.markdown(f"**Status:** {status_text}")
-
-                    st.caption(
-                        f"Theme match: {match_reason}"
-                    )
-
-           # st.json(trend_results)
-        except Exception as e:
+       # st.json(trend_results)
+    except Exception as e:
             error_message = str(e)
 
             if (

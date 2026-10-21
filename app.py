@@ -64,6 +64,428 @@ def parse_local_reviews(text):
 
     return reviews
 
+    
+def get_ux_recommendation(problem_name, evidence):
+    """Generate a UX recommendation using review evidence."""
+
+    evidence_text = " ".join(
+        str(review).lower() for review in evidence
+    )
+
+    if problem_name == "Login & Account Issues":
+        improvements = []
+
+        if any(
+            word in evidence_text
+            for word in ["otp", "verification code"]
+        ):
+            improvements.append(
+                "Improve OTP delivery reliability, "
+                "provide a resend option, and show "
+                "clear verification error messages."
+            )
+
+        if any(
+            word in evidence_text
+            for word in [
+                "password", "forgot",
+                "recover", "reset"
+            ]
+        ):
+            improvements.append(
+                "Simplify password reset and account "
+                "recovery, with clear instructions "
+                "at every step."
+            )
+
+        if improvements:
+            return " ".join(improvements)
+
+            
+    if problem_name == "App Performance & Stability":
+        improvements = []
+
+        if any(
+            word in evidence_text
+            for word in ["crash", "crashed", "crashing", "freez"]
+        ):
+            improvements.append(
+                "Investigate app crashes and freezing, "
+                "fix reproducible errors, and test "
+                "stability across supported devices."
+            )
+
+        if any(
+            word in evidence_text
+            for word in ["slow", "loading", "takes too long"]
+        ):
+            improvements.append(
+                "Optimize loading speed, reduce "
+                "unnecessary processing, and measure "
+                "performance on slower devices."
+            )
+
+        if improvements:
+            return " ".join(improvements)
+
+        return (
+            "Investigate app stability and loading "
+            "performance across supported devices."
+        )
+
+            
+    if problem_name == "Delivery Information":
+        improvements = []
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "inaccurate", "kept moving",
+                "changed repeatedly", "later than",
+                "very late", "delay", "delayed"
+            ]
+        ):
+            improvements.append(
+                "Improve delivery ETA accuracy, "
+                "show real-time delivery updates, "
+                "and proactively notify customers "
+                "when delays occur."
+            )
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "delivery time", "eta",
+                "arrival time", "when it will arrive"
+            ]
+        ):
+            improvements.append(
+                "Display a clear estimated delivery "
+                "time before customers place an order."
+            )
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "track my delivery",
+                "tracking",
+                "delivery status"
+            ]
+        ):
+            improvements.append(
+                "Provide clear order tracking, "
+                "show the current delivery status, "
+                "and keep customers updated "
+                "throughout the delivery journey."
+            )
+
+        if improvements:
+            return " ".join(improvements)
+
+        return (
+            "Make delivery information easier to find "
+            "and provide clear order-tracking updates."
+        )
+
+    if problem_name == "Checkout Experience":
+        improvements = []
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "hidden charges",
+                "unexpected fees",
+                "added charges",
+                "did not see earlier"
+            ]
+        ):
+            improvements.append(
+                "Show all fees and delivery charges before "
+                "checkout begins and keep the total cost "
+                "visible throughout checkout."
+            )
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "complicated",
+                "confusing",
+                "too many steps"
+            ]
+        ):
+            improvements.append(
+                "Simplify the checkout flow, reduce "
+                "unnecessary steps, and make each "
+                "checkout stage clear."
+            )
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "payment failed",
+                "payment failure",
+                "transaction failed",
+                "payment error"
+            ]
+        ):
+            improvements.append(
+                "Provide clear payment failure messages, "
+                "allow users to safely retry payment, "
+                "and clearly communicate transaction status "
+                "to prevent accidental double charges."
+            )
+
+        if improvements:
+            return " ".join(improvements)
+
+        return (
+            "Simplify the checkout experience and make "
+            "order costs and steps clear to users."
+        )
+
+    if problem_name == "Search Functionality":
+        improvements = []
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "irrelevant results",
+                "results are irrelevant",
+                "wrong results"
+            ]
+        ):
+            improvements.append(
+                "Improve search relevance so users receive "
+                "more accurate results for their queries."
+            )
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "can't find",
+                "cannot find",
+                "couldn't find",
+                "could not find",
+                "hard to find",
+                "difficult to find",
+                "find the product",
+                "find products"
+            ]
+        ):
+            improvements.append(
+                "Make products easier to discover with better "
+                "search matching, suggestions, and filters."
+            )
+
+        if "no results" in evidence_text:
+            improvements.append(
+                "Improve the no-results experience by suggesting "
+                "alternative products or corrected search terms."
+            )
+
+        if improvements:
+            return " ".join(improvements)
+
+        return (
+            "Improve search accuracy and make products "
+            "easier for users to discover."
+        )
+
+        
+    if problem_name == "Product Selection":
+        improvements = []
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "too many products",
+                "too many choices",
+                "confusing options"
+            ]
+        ):
+            improvements.append(
+                "Reduce choice overload by organizing products "
+                "into clear categories and offering useful filters."
+            )
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "compare similar",
+                "product comparison",
+                "compare products"
+            ]
+        ):
+            improvements.append(
+                "Provide a product comparison feature that "
+                "highlights key differences such as price, "
+                "features, and suitability."
+            )
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "guidance to choose",
+                "couldn't understand which",
+                "could not understand which",
+                "which product",
+                "which one",
+                "difficult to choose",
+                "hard to choose",
+                "best for me",
+                "product recommendation"
+            ]
+        ):
+            improvements.append(
+                "Offer personalized product recommendations "
+                "and clear guidance to help users choose "
+                "the product that best fits their needs."
+            )
+
+        if improvements:
+            return " ".join(improvements)
+
+        return (
+            "Help users choose products through clear categories, "
+            "useful comparisons, and relevant recommendations."
+        )
+
+        
+    if problem_name == "Price Transparency":
+        improvements = []
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "hidden charge",
+                "extra charge",
+                "delivery charge",
+                "delivery fee",
+                "unexpected cost"
+            ]
+        ):
+            improvements.append(
+                "Display all delivery fees and additional "
+                "charges upfront, before users reach checkout."
+            )
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "price mismatch",
+                "higher than i expected",
+                "cost more",
+                "final amount",
+                "checkout amount"
+            ]
+        ):
+            improvements.append(
+                "Keep product prices and the final payable "
+                "amount consistent and clearly visible "
+                "throughout the purchase journey."
+            )
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "total cost",
+                "pricing",
+                "price"
+            ]
+        ):
+            improvements.append(
+                "Provide a clear order-cost breakdown showing "
+                "product prices, taxes, delivery fees, "
+                "and the final total."
+            )
+
+        if improvements:
+            return " ".join(dict.fromkeys(improvements))
+
+        return (
+            "Make all product prices, additional charges, "
+            "and the final payable amount clear before "
+            "customers complete their purchase."
+        )
+
+        
+    if problem_name == "Payment & Refund Issues":
+        improvements = []
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "payment failed",
+                "payment failure",
+                "payment declined",
+                "payment error"
+            ]
+        ):
+            improvements.append(
+                "Show clear payment failure messages, explain "
+                "the reason when possible, and provide a safe "
+                "retry option with clear transaction status."
+            )
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "amount was still deducted",
+                "money was deducted",
+                "deducted money"
+            ]
+        ):
+            improvements.append(
+                "Clearly communicate whether a transaction "
+                "succeeded or failed, prevent duplicate charges, "
+                "and explain how deducted amounts will be handled."
+            )
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "refunded",
+                "refund"
+            ]
+        ):
+            improvements.append(
+                "Display refund status, expected processing "
+                "time, and clear updates until the refund "
+                "is completed."
+            )
+
+        if any(
+            phrase in evidence_text
+            for phrase in [
+                "charged twice",
+                "double charged",
+                "duplicate charge"
+            ]
+        ):
+            improvements.append(
+                "Prevent duplicate payments by disabling repeated "
+                "payment submissions while a transaction is processing. "
+                "Clearly show transaction status and provide an easy "
+                "way to report and resolve duplicate charges."
+            )
+
+        if improvements:
+            return " ".join(improvements)
+
+        return (
+            "Make payment errors, transaction status, "
+            "and refund progress clear and easy to understand."
+        )
+
+
+    return (
+        "Investigate this issue through user research "
+        "and test a targeted design improvement."
+    )
+
+
+
+
 
 
 def classify_local_review(review):
@@ -78,7 +500,9 @@ def classify_local_review(review):
             "hidden charge", "extra charge",
             "unexpected cost", "total cost",
             "checkout amount", "cost more",
-            "price mismatch"
+            "price mismatch",
+            "unexpected extra fees",
+            "extra fees",
         ],
 
         "Delivery Information": [
@@ -128,19 +552,29 @@ def classify_local_review(review):
             "refunded",
             "refund",
             "try again",
-            "payment error"
+            "payment error",
+            "charged twice",
+            "double charged",
+            "duplicate charge",
         ],
 
-        "Checkout Experience": [
+                "Checkout Experience": [
             "checkout screen",
             "checkout step",
             "during checkout",
             "final checkout",
             "checkout process",
             "complicated checkout",
-            "confusing checkout"
+            "confusing checkout",
+            "added charges",
+            "unexpected fees",
+            "hidden charges",
+            "did not see earlier",
+            "payment failed",
+            "payment failure",
+            "transaction failed",
+            "payment error"
         ],
-
 
         "App Performance & Stability": [
             "app crashes",
@@ -179,7 +613,9 @@ def classify_local_review(review):
             "forgot password",
             "recover my account",
             "account recovery",
-            "reset my password"
+            "reset my password",
+            "otp",
+            "verification code",
         ],
 
 
@@ -707,13 +1143,31 @@ def answer_research_question(question, data):
                 "Validation: Test the redesigned pricing flow with users who experienced price confusion."
             ],
 
-            "Delivery Information": [
-                "Product Page: Show the estimated delivery time before users add the product to the cart.",
-                "Cart: Keep the delivery estimate visible while users review their order.",
-                "Checkout: Confirm the expected delivery time before payment.",
-                "Status Visibility: Clearly communicate delivery timing and possible delays.",
-                "Validation: Test whether users can find the delivery estimate before ordering."
-            ],
+          
+"Delivery Information": [
+    "arrive", "delivery time",
+    "estimated delivery",
+    "when my groceries",
+    "delivery date", "delivery slot",
+    "delivery estimate", "delivery eta",
+    "eta", "when will it come",
+    "when will it arrive",
+    "delivery status",
+
+    # New: indirect delivery complaints
+    "waited forever for my order",
+    "waiting forever for my order",
+    "order is taking forever",
+    "order took forever",
+    "order never showed up",
+    "order hasn't arrived",
+    "order has not arrived",
+    "still waiting for my order",
+    "my order is late",
+    "late delivery",
+    "delayed order"
+],
+
 
             "Search Functionality": [
                 "Search: Improve the relevance of search results.",
@@ -1632,7 +2086,9 @@ if selected_page == "💡 Insights":
                         "Improve OTP delivery reliability, "
                         "provide clear verification errors, "
                         "and simplify password reset "
-                        "and account recovery."
+                        "and account recovery,"
+                        "otp",
+                        "verification code",
                     ),
                     "App Performance & Stability": (
                         "Fix app crashes, improve loading speed, "
@@ -1646,47 +2102,96 @@ if selected_page == "💡 Insights":
 
                 }
 
-                recommendation = recommendations.get(
-                    problem_name,
-                    "Investigate this issue through user research "
-                    "and test a targeted design improvement."
-                )
+             
+                
+                
+                if problem_name in [
+                    "Login & Account Issues",
+                    "App Performance & Stability",
+                    "Delivery Information",
+                    "Checkout Experience",
+                    "Search Functionality",
+                    "Product Selection",
+                    "Price Transparency",
+                    "Payment & Refund Issues"
+                ]:
 
-
-                # Evidence-based performance recommendations
-                if problem_name == "App Performance & Stability":
-                    evidence_text = " ".join(
-                        str(review).lower()
-                        for review in evidence
+                    recommendation = get_ux_recommendation(
+                        problem_name,
+                        evidence
+                    )
+                else:
+                    recommendation = recommendations.get(
+                        problem_name,
+                        "Investigate this issue through user research "
+                        "and test a targeted design improvement."
                     )
 
-                    improvements = []
+                if problem_name == "Login & Account Issues":
+                    why_it_matters = (
+                        "Login failures and account recovery difficulties "
+                        "can prevent users from accessing the product "
+                        "and increase frustration."
+                    )
+                elif problem_name == "Payment & Refund Issues":
+                    why_it_matters = (
+                        "Payment failures and unclear refund processes "
+                        "can undermine trust and prevent users from "
+                        "completing purchases."
+                    )
+                elif problem_name == "App Performance & Stability":
+                    why_it_matters = (
+                        "Frequent crashes, freezing, and slow loading "
+                        "can interrupt user tasks, reduce satisfaction, "
+                        "and cause users to abandon the app."
+                    )
 
-                    if any(
-                        word in evidence_text
-                        for word in ["crash", "crashed", "freez"]
-                    ):
-                        improvements.append(
-                            "Investigate crashes, fix reproducible "
-                            "errors, and test app stability."
-                        )
+                elif problem_name == "Delivery Information":
+                    why_it_matters = (
+                        "Missing delivery estimates and unclear tracking "
+                        "can create uncertainty, reduce customer confidence, "
+                        "and increase support requests."
+                    )
 
-                    if any(
-                        word in evidence_text
-                        for word in ["slow", "loading", "takes too long"]
-                    ):
-                        improvements.append(
-                            "Optimize loading speed, reduce unnecessary "
-                            "processing, and test performance "
-                            "on slower devices."
-                        )
+                elif problem_name == "Checkout Experience":
+                    why_it_matters = (
+                        "A complicated checkout process can cause users "
+                        "to abandon their purchases, reducing completed "
+                        "orders and customer satisfaction."
+                    )
 
-                    if improvements:
-                        recommendation = " ".join(improvements)
+                elif problem_name == "Search Functionality":
+                    why_it_matters = (
+                        "Irrelevant search results and difficulty finding products "
+                        "can frustrate users, slow down shopping, and cause "
+                        "customers to leave without purchasing."
+                    )
+
+                elif problem_name == "Product Selection":
+                    why_it_matters = (
+                        "Too many choices and unclear product differences "
+                        "can overwhelm customers, delay purchasing decisions, "
+                        "and increase the likelihood of abandoned purchases."
+                    )
+
+                elif problem_name == "Price Transparency":
+                    why_it_matters = (
+                        "Unexpected charges and inconsistent pricing can "
+                        "reduce customer trust, increase checkout abandonment, "
+                        "and lead to fewer completed purchases."
+                    )
+                else:
+                    why_it_matters = (
+                        "Unresolved UX problems can create frustration "
+                        "and make users less likely to complete their tasks."
+                    )
 
 
                 st.markdown("**💡 Recommended UX Improvement:**")
                 st.success(recommendation)
+
+                st.markdown("**🎯 Why This Matters:**")
+                st.info(why_it_matters)
 
                 st.divider()
 
@@ -1942,10 +2447,6 @@ if selected_page == "💬 AI Chat":
                                 "checkout flow with users."
                             )
 
-
-                    elif name == "Login & Account Issues":
-                        improvements = []
-
                         if any(
                             phrase in evidence_text
                             for phrase in ["otp", "verification code"]
@@ -1975,37 +2476,20 @@ if selected_page == "💬 AI Chat":
 
 
 
+                    
                     elif name == "App Performance & Stability":
-                        improvements = []
+                        suggestion = get_ux_recommendation(
+                            name,
+                            evidence
+                        )
 
-                        if any(
-                            phrase in evidence_text
-                            for phrase in [
-                                "crash", "crashed",
-                                "crashing", "freez"
-                            ]
-                        ):
-                            improvements.append(
-                                "Investigate app crashes and freezing, "
-                                "fix reproducible errors, and test "
-                                "stability across supported devices."
-                            )
 
-                        if any(
-                            phrase in evidence_text
-                            for phrase in [
-                                "slow", "loading",
-                                "takes too long"
-                            ]
-                        ):
-                            improvements.append(
-                                "Optimize loading speed, reduce "
-                                "unnecessary processing, and measure "
-                                "performance on slower devices."
-                            )
+                            
+                    if name == "Login & Account Issues":
+                        suggestion = get_ux_recommendation(
+                            name, matched_problem.get("evidence", [])
+                        )
 
-                        if improvements:
-                            suggestion = " ".join(improvements)
 
 
 
